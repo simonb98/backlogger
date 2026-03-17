@@ -57,18 +57,26 @@ import { IgdbSearchResult } from '../../core/models';
                 <div class="text-sm mt-2">⭐ {{ game.rating | number:'1.0-0' }}</div>
               }
             </div>
-            <div class="flex">
-              <button
-                class="flex-1 py-3 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors"
-                (click)="openAddDialog(game, 'backlog')">
-                + Library
-              </button>
-              <button
-                class="flex-1 py-3 bg-purple-500 text-white font-medium hover:bg-purple-600 transition-colors border-l border-purple-400"
-                (click)="openAddDialog(game, 'wishlist')">
-                ♡ Wishlist
-              </button>
-            </div>
+            @if (addedGameIds.has(game.id)) {
+              <div class="py-3 bg-green-500 text-white font-medium text-center">
+                ✓ Added
+              </div>
+            } @else {
+              <div class="flex">
+                <button
+                  class="flex-1 py-3 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors"
+                  [disabled]="adding()"
+                  (click)="openAddDialog(game, 'backlog')">
+                  + Library
+                </button>
+                <button
+                  class="flex-1 py-3 bg-purple-500 text-white font-medium hover:bg-purple-600 transition-colors border-l border-purple-400"
+                  [disabled]="adding()"
+                  (click)="openAddDialog(game, 'wishlist')">
+                  ♡ Wishlist
+                </button>
+              </div>
+            }
           </div>
         }
       </div>
@@ -132,6 +140,7 @@ export class SearchContainer implements OnInit {
   selectedPlatformId = signal<number | null>(null);
   addStatus = signal<'backlog' | 'wishlist'>('backlog');
   adding = signal(false);
+  addedGameIds = new Set<number>();
 
   platforms = this.platformsService.platforms;
 
@@ -207,7 +216,8 @@ export class SearchContainer implements OnInit {
     this.gamesService.addGame({ igdbId: game.id, platformId, status }).subscribe({
       next: () => {
         this.adding.set(false);
-        this.router.navigate(['/library']);
+        // Mark this game as added so user sees feedback
+        this.addedGameIds.add(game.id);
       },
       error: (err) => {
         this.adding.set(false);
@@ -226,8 +236,9 @@ export class SearchContainer implements OnInit {
     this.gamesService.addGame({ igdbId: game.id, platformId, status }).subscribe({
       next: () => {
         this.adding.set(false);
+        // Mark this game as added so user sees feedback
+        this.addedGameIds.add(game.id);
         this.closeAddDialog();
-        this.router.navigate(['/library']);
       },
       error: (err) => {
         this.adding.set(false);
