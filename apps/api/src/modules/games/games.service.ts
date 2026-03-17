@@ -25,6 +25,9 @@ export class GamesService {
     // Apply filters
     if (filters.status) {
       query.andWhere('ug.status = :status', { status: filters.status });
+    } else {
+      // Exclude wishlist games from "All" view
+      query.andWhere('ug.status != :wishlistStatus', { wishlistStatus: 'wishlist' });
     }
     if (filters.platform) {
       query.andWhere('ug.platformId = :platformId', { platformId: filters.platform });
