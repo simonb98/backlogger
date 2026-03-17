@@ -16,6 +16,16 @@ export interface ImportResult {
   }[];
 }
 
+export interface ImportProgress {
+  current: number;
+  total: number;
+  gameName: string;
+  status: 'imported' | 'skipped' | 'failed' | 'processing';
+  reason?: string;
+  done: boolean;
+  result?: ImportResult;
+}
+
 @Injectable()
 export class SteamImportService {
   private readonly logger = new Logger(SteamImportService.name);
@@ -29,6 +39,13 @@ export class SteamImportService {
   ) {}
 
   async importFromSteam(steamInput: string): Promise<ImportResult> {
+    return this.importFromSteamWithProgress(steamInput);
+  }
+
+  async importFromSteamWithProgress(
+    steamInput: string,
+    onProgress?: (progress: ImportProgress) => void,
+  ): Promise<ImportResult> {
     const steamId = await this.steamService.getSteamIdFromInput(steamInput);
     const steamGames = await this.steamService.getOwnedGames(steamId);
 
@@ -41,8 +58,20 @@ export class SteamImportService {
     }
 
     const result: ImportResult = { imported: 0, skipped: 0, failed: 0, games: [] };
+    const total = steamGames.length;
 
-    for (const steamGame of steamGames) {
+    for (let i = 0; i < steamGames.length; i++) {
+      const steamGame = steamGames[i];
+
+      // Send processing event
+      onProgress?.({
+        current: i + 1,
+        total,
+        gameName: steamGame.name,
+        status: 'processing',
+        done: false,
+      });
+
       try {
         const importStatus = await this.importSingleGame(steamGame, pcPlatform);
         result.games.push({ name: steamGame.name, ...importStatus });
@@ -50,15 +79,45 @@ export class SteamImportService {
         if (importStatus.status === 'imported') result.imported++;
         else if (importStatus.status === 'skipped') result.skipped++;
         else result.failed++;
+
+        // Send status update
+        onProgress?.({
+          current: i + 1,
+          total,
+          gameName: steamGame.name,
+          status: importStatus.status,
+          reason: importStatus.reason,
+          done: false,
+        });
       } catch (error) {
         result.failed++;
+        const reason = error instanceof Error ? error.message : 'Unknown error';
         result.games.push({
           name: steamGame.name,
           status: 'failed',
-          reason: error instanceof Error ? error.message : 'Unknown error',
+          reason,
+        });
+
+        onProgress?.({
+          current: i + 1,
+          total,
+          gameName: steamGame.name,
+          status: 'failed',
+          reason,
+          done: false,
         });
       }
     }
+
+    // Send final result
+    onProgress?.({
+      current: total,
+      total,
+      gameName: '',
+      status: 'imported',
+      done: true,
+      result,
+    });
 
     return result;
   }

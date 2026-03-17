@@ -1,5 +1,6 @@
-import { Controller, Post, Get, Body, Query } from '@nestjs/common';
+import { Controller, Post, Get, Body, Query, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Response } from 'express';
 import { SteamService } from './steam.service';
 import { SteamImportService, ImportResult } from './steam-import.service';
 import { SteamImportDto } from './dto/steam-import.dto';
@@ -38,6 +39,36 @@ export class SteamController {
   @ApiResponse({ status: 201, description: 'Import completed' })
   async importGames(@Body() dto: SteamImportDto): Promise<ImportResult> {
     return this.steamImportService.importFromSteam(dto.steamId);
+  }
+
+  @Get('import-stream')
+  @ApiOperation({ summary: 'Import games from Steam with SSE progress updates' })
+  async importGamesStream(
+    @Query('steamId') steamId: string,
+    @Res() res: Response,
+  ) {
+    // Set up SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const sendEvent = (event: string, data: unknown) => {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    try {
+      await this.steamImportService.importFromSteamWithProgress(
+        steamId,
+        (progress) => sendEvent('progress', progress),
+      );
+    } catch (error) {
+      sendEvent('error', {
+        message: error instanceof Error ? error.message : 'Import failed'
+      });
+    }
+
+    res.end();
   }
 }
 

@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { SteamService, SteamProfileInfo, ImportResult } from '../../core/services';
+import { SteamService, SteamProfileInfo, ImportResult, ImportProgress } from '../../core/services';
 
 @Component({
   selector: 'app-import-container',
@@ -14,7 +14,7 @@ import { SteamService, SteamProfileInfo, ImportResult } from '../../core/service
       <p class="text-gray-500 mb-8">Import your Steam library to quickly add games</p>
 
       <!-- Step 1: Enter Steam ID -->
-      @if (!profile() && !importResult()) {
+      @if (!profile() && !importResult() && !importing()) {
         <div class="bg-white p-6 rounded-xl shadow-sm">
           <label class="block font-medium mb-2">Steam Profile URL or ID</label>
           <input
@@ -40,7 +40,7 @@ import { SteamService, SteamProfileInfo, ImportResult } from '../../core/service
       }
 
       <!-- Step 2: Confirm Profile -->
-      @if (profile() && !importResult()) {
+      @if (profile() && !importResult() && !importing()) {
         <div class="bg-white p-6 rounded-xl shadow-sm">
           <div class="flex items-center gap-4 mb-6">
             <img [src]="profile()!.profile.avatar" class="w-16 h-16 rounded-full" />
@@ -57,14 +57,63 @@ import { SteamService, SteamProfileInfo, ImportResult } from '../../core/service
             </button>
             <button
               (click)="startImport()"
-              [disabled]="importing()"
-              class="flex-1 py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 disabled:opacity-50">
-              {{ importing() ? 'Importing...' : 'Import Games' }}
+              class="flex-1 py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600">
+              Import Games
             </button>
           </div>
-          @if (importing()) {
-            <p class="mt-4 text-center text-gray-500">This may take a few minutes...</p>
+        </div>
+      }
+
+      <!-- Step 2.5: Import Progress -->
+      @if (importing()) {
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <h2 class="text-xl font-semibold mb-4">Importing Games...</h2>
+
+          <!-- Progress bar -->
+          <div class="mb-4">
+            <div class="flex justify-between text-sm text-gray-600 mb-1">
+              <span>{{ progress()?.current || 0 }} of {{ progress()?.total || 0 }}</span>
+              <span>{{ progressPercent() }}%</span>
+            </div>
+            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                class="h-full bg-blue-500 transition-all duration-300"
+                [style.width.%]="progressPercent()">
+              </div>
+            </div>
+          </div>
+
+          <!-- Current game -->
+          @if (progress()?.gameName) {
+            <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              @if (progress()?.status === 'processing') {
+                <div class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              } @else if (progress()?.status === 'imported') {
+                <span class="text-green-500">✓</span>
+              } @else if (progress()?.status === 'skipped') {
+                <span class="text-yellow-500">○</span>
+              } @else {
+                <span class="text-red-500">✗</span>
+              }
+              <span class="truncate">{{ progress()?.gameName }}</span>
+            </div>
           }
+
+          <!-- Stats so far -->
+          <div class="grid grid-cols-3 gap-4 mt-4 text-center text-sm">
+            <div>
+              <div class="font-semibold text-green-600">{{ importedCount() }}</div>
+              <div class="text-gray-500">Imported</div>
+            </div>
+            <div>
+              <div class="font-semibold text-yellow-600">{{ skippedCount() }}</div>
+              <div class="text-gray-500">Skipped</div>
+            </div>
+            <div>
+              <div class="font-semibold text-red-600">{{ failedCount() }}</div>
+              <div class="text-gray-500">Failed</div>
+            </div>
+          </div>
         </div>
       }
 
@@ -120,6 +169,18 @@ export class ImportContainer {
   error = signal<string | null>(null);
   profile = signal<SteamProfileInfo | null>(null);
   importResult = signal<ImportResult | null>(null);
+  progress = signal<ImportProgress | null>(null);
+
+  // Live counters
+  importedCount = signal(0);
+  skippedCount = signal(0);
+  failedCount = signal(0);
+
+  progressPercent(): number {
+    const p = this.progress();
+    if (!p || p.total === 0) return 0;
+    return Math.round((p.current / p.total) * 100);
+  }
 
   lookupProfile() {
     this.loading.set(true);
@@ -139,14 +200,30 @@ export class ImportContainer {
 
   startImport() {
     this.importing.set(true);
+    this.importedCount.set(0);
+    this.skippedCount.set(0);
+    this.failedCount.set(0);
 
-    this.steamService.importGames(this.steamInput).subscribe({
-      next: (result) => {
-        this.importResult.set(result);
-        this.importing.set(false);
+    this.steamService.importGamesWithProgress(this.steamInput).subscribe({
+      next: (progress) => {
+        this.progress.set(progress);
+
+        // Update counters based on status
+        if (progress.status === 'imported') {
+          this.importedCount.update(c => c + 1);
+        } else if (progress.status === 'skipped') {
+          this.skippedCount.update(c => c + 1);
+        } else if (progress.status === 'failed') {
+          this.failedCount.update(c => c + 1);
+        }
+
+        if (progress.done && progress.result) {
+          this.importResult.set(progress.result);
+          this.importing.set(false);
+        }
       },
       error: (err) => {
-        this.error.set(err.error?.error?.message || 'Import failed');
+        this.error.set(err.message || 'Import failed');
         this.importing.set(false);
       },
     });
