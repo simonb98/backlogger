@@ -5,10 +5,8 @@ import {
   signal,
   inject,
   HostListener,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
   OnDestroy,
+  effect,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -305,10 +303,10 @@ interface GroupedGame {
         }
       </div>
 
-      <!-- Infinite scroll sentinel -->
-      @if (hasMoreGames()) {
-        <div #scrollSentinel class="py-8 text-center">
-          <div class="text-gray-400">Loading more...</div>
+      <!-- Infinite scroll indicator -->
+      @if (hasMoreGames() && !loading()) {
+        <div class="py-8 text-center text-gray-400">
+          Scroll for more...
         </div>
       }
     </div>
@@ -325,10 +323,8 @@ interface GroupedGame {
     }
   `,
 })
-export class LibraryContainer implements AfterViewInit, OnDestroy {
+export class LibraryContainer implements OnDestroy {
   private document = inject(DOCUMENT);
-
-  @ViewChild('scrollSentinel') scrollSentinel?: ElementRef<HTMLDivElement>;
   private intersectionObserver?: IntersectionObserver;
 
   // Filters
@@ -403,6 +399,17 @@ export class LibraryContainer implements AfterViewInit, OnDestroy {
   onScroll() {
     const scrollTop = this.document.documentElement.scrollTop || this.document.body.scrollTop;
     this.showBackToTop.set(scrollTop > 400);
+
+    // Infinite scroll: load more when near bottom
+    if (this.hasMoreGames() && !this.loading()) {
+      const scrollHeight = this.document.documentElement.scrollHeight;
+      const clientHeight = this.document.documentElement.clientHeight;
+      const scrolledToBottom = scrollTop + clientHeight >= scrollHeight - 300;
+
+      if (scrolledToBottom) {
+        this.loadMore();
+      }
+    }
   }
 
   hasActiveFilters = computed(
@@ -486,48 +493,16 @@ export class LibraryContainer implements AfterViewInit, OnDestroy {
   }
 
   // Infinite scroll methods
-  ngAfterViewInit() {
-    this.setupIntersectionObserver();
-  }
-
   ngOnDestroy() {
     this.intersectionObserver?.disconnect();
   }
 
-  private setupIntersectionObserver() {
-    this.intersectionObserver = new IntersectionObserver(
-      entries => {
-        if (entries[0]?.isIntersecting && this.hasMoreGames()) {
-          this.loadMore();
-        }
-      },
-      { rootMargin: '200px' } // Load 200px before reaching the sentinel
-    );
-
-    // Observe after a small delay to let the view render
-    setTimeout(() => this.observeSentinel(), 100);
-  }
-
-  private observeSentinel() {
-    // Disconnect previous observations
-    this.intersectionObserver?.disconnect();
-
-    // Re-observe if sentinel exists
-    if (this.scrollSentinel?.nativeElement) {
-      this.intersectionObserver?.observe(this.scrollSentinel.nativeElement);
-    }
-  }
-
   resetDisplayCount() {
     this.displayedCount.set(this.ITEMS_PER_PAGE);
-    // Re-observe sentinel after reset
-    setTimeout(() => this.observeSentinel(), 100);
   }
 
   private loadMore() {
     this.displayedCount.update(count => count + this.ITEMS_PER_PAGE);
-    // Re-observe sentinel after loading more (element gets recreated)
-    setTimeout(() => this.observeSentinel(), 50);
   }
 
   scrollToTop() {
