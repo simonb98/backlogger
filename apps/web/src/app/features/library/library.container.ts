@@ -1,5 +1,15 @@
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { Component, computed, signal, inject, HostListener } from '@angular/core';
+import {
+  Component,
+  computed,
+  signal,
+  inject,
+  HostListener,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  OnDestroy,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
@@ -295,19 +305,10 @@ interface GroupedGame {
         }
       </div>
 
-      <!-- Load more trigger -->
-      @if (hasMoreGames() && !loading()) {
-        <div class="py-8 text-center">
-          @if (loadingMore()) {
-            <div class="text-gray-500">Loading more games...</div>
-          } @else {
-            <button
-              (click)="loadMore()"
-              class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              Load More
-            </button>
-          }
+      <!-- Infinite scroll sentinel -->
+      @if (hasMoreGames()) {
+        <div #scrollSentinel class="py-8 text-center">
+          <div class="text-gray-400">Loading more...</div>
         </div>
       }
     </div>
@@ -324,8 +325,11 @@ interface GroupedGame {
     }
   `,
 })
-export class LibraryContainer {
+export class LibraryContainer implements AfterViewInit, OnDestroy {
   private document = inject(DOCUMENT);
+
+  @ViewChild('scrollSentinel') scrollSentinel?: ElementRef<HTMLDivElement>;
+  private intersectionObserver?: IntersectionObserver;
 
   // Filters
   selectedStatus = signal<GameStatus | null>(null);
@@ -337,7 +341,6 @@ export class LibraryContainer {
   // Infinite scroll - 5 rows * 6 columns = 30 games per page
   private readonly ITEMS_PER_PAGE = 30;
   displayedCount = signal(30);
-  loadingMore = signal(false);
   showBackToTop = signal(false);
 
   // Selection
@@ -483,17 +486,42 @@ export class LibraryContainer {
   }
 
   // Infinite scroll methods
-  resetDisplayCount() {
-    this.displayedCount.set(this.ITEMS_PER_PAGE);
+  ngAfterViewInit() {
+    this.setupIntersectionObserver();
   }
 
-  loadMore() {
-    this.loadingMore.set(true);
-    // Simulate a small delay for UX
-    setTimeout(() => {
-      this.displayedCount.update(count => count + this.ITEMS_PER_PAGE);
-      this.loadingMore.set(false);
-    }, 200);
+  ngOnDestroy() {
+    this.intersectionObserver?.disconnect();
+  }
+
+  private setupIntersectionObserver() {
+    this.intersectionObserver = new IntersectionObserver(
+      entries => {
+        if (entries[0]?.isIntersecting && this.hasMoreGames()) {
+          this.loadMore();
+        }
+      },
+      { rootMargin: '200px' } // Load 200px before reaching the sentinel
+    );
+
+    // Observe after a small delay to let the view render
+    setTimeout(() => this.observeSentinel(), 100);
+  }
+
+  private observeSentinel() {
+    if (this.scrollSentinel?.nativeElement) {
+      this.intersectionObserver?.observe(this.scrollSentinel.nativeElement);
+    }
+  }
+
+  resetDisplayCount() {
+    this.displayedCount.set(this.ITEMS_PER_PAGE);
+    // Re-observe sentinel after reset
+    setTimeout(() => this.observeSentinel(), 100);
+  }
+
+  private loadMore() {
+    this.displayedCount.update(count => count + this.ITEMS_PER_PAGE);
   }
 
   scrollToTop() {
