@@ -1,0 +1,25 @@
+{
+  "name": "backlogger",
+  "version": "0.0.1",
+  "description": "Personal gaming backlog tracking application",
+  "private": true,
+  "scripts": {
+    "api:dev": "npm run --prefix apps/api start:dev",
+    "api:build": "npm run --prefix apps/api build",
+    "api:start": "npm run --prefix apps/api start:prod",
+    "web:dev": "npm run --prefix apps/web start",
+    "web:build": "npm run --prefix apps/web build",
+    "db:up": "docker compose -f docker/docker-compose.dev.yml up -d",
+    "db:down": "docker compose -f docker/docker-compose.dev.yml down",
+    "db:logs": "docker compose -f docker/docker-compose.dev.yml logs -f",
+    "install:all": "npm install && npm run --prefix apps/api install && npm run --prefix apps/web install"
+  },
+  "keywords": [
+    "gaming",
+    "backlog",
+    "tracker"
+  ],
+  "author": "",
+  "license": "MIT"
+}
+
