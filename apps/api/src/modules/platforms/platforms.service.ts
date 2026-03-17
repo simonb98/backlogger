@@ -49,7 +49,7 @@ const IGDB_PLATFORM_MAPPING: Record<number, string> = {
 
   // Nintendo
   130: 'Switch',  // Nintendo Switch
-  441: 'Switch',  // Nintendo Switch 2 -> maps to Switch
+  508: 'Switch',  // Nintendo Switch 2 -> maps to Switch
   137: '3DS',     // Nintendo 3DS
   4: 'N64',       // Nintendo 64 (not in our list)
   5: 'Wii',       // Wii (not in our list)
