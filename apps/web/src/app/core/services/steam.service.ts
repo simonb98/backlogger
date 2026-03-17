@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { ApiService } from './api.service';
-import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 
 export interface SteamProfile {
   steamId: string;
@@ -42,6 +42,7 @@ export interface ImportProgress {
 })
 export class SteamService {
   private api = inject(ApiService);
+  private authService = inject(AuthService);
 
   getProfile(steamId: string): Observable<SteamProfileInfo> {
     return this.api.get<SteamProfileInfo>('/steam/profile', { steamId });
@@ -53,9 +54,11 @@ export class SteamService {
 
   importGamesWithProgress(steamId: string): Observable<ImportProgress> {
     const subject = new Subject<ImportProgress>();
+    const token = this.authService.getToken();
 
+    // Use relative URL so it goes through the proxy, include token in query
     const eventSource = new EventSource(
-      `${environment.apiUrl}/steam/import-stream?steamId=${encodeURIComponent(steamId)}`
+      `/api/v1/steam/import-stream?steamId=${encodeURIComponent(steamId)}&token=${encodeURIComponent(token || '')}`
     );
 
     eventSource.addEventListener('progress', (event) => {

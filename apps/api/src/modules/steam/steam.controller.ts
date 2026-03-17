@@ -1,6 +1,7 @@
 import { Controller, Post, Get, Body, Query, Res, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { JwtService } from '@nestjs/jwt';
 import { SteamService } from './steam.service';
 import { SteamImportService, ImportResult } from './steam-import.service';
 import { SteamImportDto } from './dto/steam-import.dto';
@@ -9,15 +10,16 @@ import { CurrentUser, CurrentUserPayload } from '../auth/decorators/current-user
 
 @ApiTags('Steam')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('steam')
 export class SteamController {
   constructor(
     private readonly steamService: SteamService,
     private readonly steamImportService: SteamImportService,
+    private readonly jwtService: JwtService,
   ) {}
 
   @Get('profile')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get Steam profile info' })
   async getProfile(@Query('steamId') steamId: string) {
     const resolvedId = await this.steamService.getSteamIdFromInput(steamId);
@@ -39,6 +41,7 @@ export class SteamController {
   }
 
   @Post('import')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Import games from Steam library' })
   @ApiResponse({ status: 201, description: 'Import completed' })
   async importGames(
@@ -51,8 +54,8 @@ export class SteamController {
   @Get('import-stream')
   @ApiOperation({ summary: 'Import games from Steam with SSE progress updates' })
   async importGamesStream(
-    @CurrentUser() user: CurrentUserPayload,
     @Query('steamId') steamId: string,
+    @Query('token') token: string,
     @Res() res: Response,
   ) {
     // Set up SSE headers
@@ -65,9 +68,20 @@ export class SteamController {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     };
 
+    // Verify JWT token from query parameter (EventSource can't send headers)
+    let userId: number;
+    try {
+      const payload = this.jwtService.verify(token);
+      userId = payload.sub;
+    } catch {
+      sendEvent('error', { message: 'Unauthorized' });
+      res.end();
+      return;
+    }
+
     try {
       await this.steamImportService.importFromSteamWithProgress(
-        user.id,
+        userId,
         steamId,
         (progress) => sendEvent('progress', progress),
       );
