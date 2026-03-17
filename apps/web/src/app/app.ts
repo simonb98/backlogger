@@ -38,9 +38,18 @@ import { ThemeService, AuthService } from './core/services';
               {{ themeService.theme() === 'dark' ? '☀️' : '🌙' }}
             </button>
 
-            <span class="text-sm text-gray-500 dark:text-gray-400">
-              {{ authService.user()?.displayName || authService.user()?.email }}
-            </span>
+            <a routerLink="/profile" class="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors no-underline">
+              @if (authService.user()?.steamAvatar) {
+                <img [src]="authService.user()?.steamAvatar" alt="Avatar" class="w-6 h-6 rounded-full"/>
+              } @else {
+                <div class="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                  {{ (authService.user()?.displayName || authService.user()?.email || '?').substring(0, 1).toUpperCase() }}
+                </div>
+              }
+              <span class="text-sm text-gray-700 dark:text-gray-300">
+                {{ authService.user()?.displayName || authService.user()?.email }}
+              </span>
+            </a>
 
             <button
               (click)="authService.logout()"

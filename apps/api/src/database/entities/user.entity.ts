@@ -16,14 +16,21 @@ export class User {
   id: number;
 
   @Index()
-  @Column({ unique: true, length: 255 })
-  email: string;
+  @Column({ unique: true, length: 255, nullable: true })
+  email?: string;
 
-  @Column({ length: 255 })
-  password: string; // bcrypt hashed
+  @Column({ length: 255, nullable: true })
+  password?: string; // bcrypt hashed, null for Steam-only users
 
   @Column({ name: 'display_name', length: 100, nullable: true })
   displayName?: string;
+
+  @Index()
+  @Column({ name: 'steam_id', length: 20, unique: true, nullable: true })
+  steamId?: string; // Steam 64-bit ID
+
+  @Column({ name: 'steam_avatar', length: 255, nullable: true })
+  steamAvatar?: string; // Steam avatar URL
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

@@ -82,6 +82,25 @@ import { AuthService } from '../../../core/services';
             {{ loading() ? 'Creating account...' : 'Create Account' }}
           </button>
 
+          <div class="relative my-6">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-gray-200 dark:border-gray-600"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+              <span class="px-4 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">or</span>
+            </div>
+          </div>
+
+          <a
+            [href]="steamLoginUrl"
+            class="w-full py-3 bg-[#1b2838] text-white font-semibold rounded-lg hover:bg-[#2a475e] flex items-center justify-center gap-3 no-underline"
+          >
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.08 3.15 9.42 7.6 11.18l3.69-5.27c-.22-.05-.44-.08-.67-.08-2.35 0-4.27 1.92-4.27 4.27 0 .23.02.45.05.67L.86 18.33C2.44 21.26 5.97 23.15 10 23.15c5.52 0 10-4.48 10-10 0-5.52-4.48-10-10-10zm-.62 15.77c-2.07 0-3.75-1.68-3.75-3.75s1.68-3.75 3.75-3.75c.87 0 1.67.3 2.31.8l-1.18 1.68c-.34-.22-.75-.35-1.18-.35-.97 0-1.75.78-1.75 1.75s.78 1.75 1.75 1.75c.43 0 .82-.16 1.12-.41l1.15 1.65c-.61.4-1.34.63-2.12.63h-.1z"/>
+            </svg>
+            Sign up with Steam
+          </a>
+
           <p class="mt-6 text-center text-gray-500 dark:text-gray-400">
             Already have an account?
             <a routerLink="/login" class="text-blue-500 hover:underline">Sign in</a>
@@ -101,6 +120,7 @@ export default class RegisterComponent {
   confirmPassword = '';
   loading = signal(false);
   error = signal<string | null>(null);
+  steamLoginUrl = this.authService.getSteamLoginUrl();
 
   onSubmit() {
     if (!this.email || !this.password) {

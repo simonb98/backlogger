@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SteamService, SteamGame } from './steam.service';
 import { IgdbService } from '../igdb/igdb.service';
-import { Game, UserGame, Platform } from '../../database/entities';
+import { Game, UserGame, Platform, User } from '../../database/entities';
 
 export interface ImportResult {
   imported: number;
@@ -36,6 +36,7 @@ export class SteamImportService {
     @InjectRepository(Game) private gameRepository: Repository<Game>,
     @InjectRepository(UserGame) private userGameRepository: Repository<UserGame>,
     @InjectRepository(Platform) private platformRepository: Repository<Platform>,
+    @InjectRepository(User) private userRepository: Repository<User>,
   ) {}
 
   async importFromSteam(userId: number, steamInput: string): Promise<ImportResult> {
@@ -49,6 +50,9 @@ export class SteamImportService {
   ): Promise<ImportResult> {
     const steamId = await this.steamService.getSteamIdFromInput(steamInput);
     const steamGames = await this.steamService.getOwnedGames(steamId);
+
+    // Link Steam ID to user if not already linked
+    await this.linkSteamToUser(userId, steamId);
 
     // Get PC platform
     const pcPlatform = await this.platformRepository.findOne({
@@ -199,6 +203,27 @@ export class SteamImportService {
     await this.userGameRepository.save(userGame);
 
     return { status: 'imported' };
+  }
+
+  private async linkSteamToUser(userId: number, steamId: string): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (user && !user.steamId) {
+        // Check if this Steam ID is already linked to another user
+        const existingUser = await this.userRepository.findOne({ where: { steamId } });
+        if (!existingUser) {
+          // Get Steam profile for avatar
+          const profile = await this.steamService.getProfile(steamId);
+          user.steamId = steamId;
+          user.steamAvatar = profile?.avatarfull;
+          await this.userRepository.save(user);
+          this.logger.log(`Linked Steam ID ${steamId} to user ${userId}`);
+        }
+      }
+    } catch (error) {
+      // Non-critical, just log and continue
+      this.logger.warn(`Failed to link Steam ID to user: ${error}`);
+    }
   }
 }
 

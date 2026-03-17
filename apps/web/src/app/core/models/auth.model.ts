@@ -1,7 +1,9 @@
 export interface User {
   id: number;
-  email: string;
+  email?: string;
   displayName?: string;
+  steamId?: string;
+  steamAvatar?: string;
 }
 
 export interface LoginRequest {

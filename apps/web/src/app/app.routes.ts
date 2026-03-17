@@ -22,6 +22,11 @@ export const routes: Routes = [
     canActivate: [guestGuard],
   },
   {
+    path: 'auth/steam-callback',
+    loadComponent: () => import('./features/auth/steam-callback/steam-callback.component'),
+    title: 'Signing In - Backlogger',
+  },
+  {
     path: 'library',
     loadComponent: () =>
       import('./features/library/library.container').then((m) => m.LibraryContainer),
@@ -55,6 +60,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/discover/discover.container').then((m) => m.DiscoverContainer),
     title: 'What to Play? - Backlogger',
+    canActivate: [authGuard],
+  },
+  {
+    path: 'profile',
+    loadComponent: () =>
+      import('./features/profile/profile.container').then((m) => m.ProfileContainer),
+    title: 'Profile - Backlogger',
     canActivate: [authGuard],
   },
   { path: '**', redirectTo: 'library' },

@@ -71,6 +71,34 @@ export class AuthService {
     return this.accessToken();
   }
 
+  getSteamLoginUrl(): string {
+    // Redirect to backend Steam auth endpoint
+    return '/api/v1/auth/steam';
+  }
+
+  handleSteamCallback(token: string): Observable<User> {
+    // Store token and fetch user info
+    this.accessToken.set(token);
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.setItem(TOKEN_KEY, token);
+    }
+
+    // Fetch user info with the new token
+    return this.http.get<{ success: boolean; data: User }>('/api/v1/auth/me').pipe(
+      tap(response => {
+        this.currentUser.set(response.data);
+        if (isPlatformBrowser(this.platformId)) {
+          localStorage.setItem(USER_KEY, JSON.stringify(response.data));
+        }
+      }),
+      map(response => response.data),
+      catchError(error => {
+        this.clearAuth();
+        return throwError(() => error);
+      }),
+    );
+  }
+
   private handleAuthSuccess(response: AuthResponse): void {
     this.accessToken.set(response.accessToken);
     this.currentUser.set(response.user);

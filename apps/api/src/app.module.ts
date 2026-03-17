@@ -8,6 +8,7 @@ import { IgdbModule } from './modules/igdb/igdb.module';
 import { PlatformsModule } from './modules/platforms/platforms.module';
 import { GamesModule } from './modules/games/games.module';
 import { SteamModule } from './modules/steam/steam.module';
+import { ProfileModule } from './modules/profile/profile.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { SteamModule } from './modules/steam/steam.module';
     PlatformsModule,
     GamesModule,
     SteamModule,
+    ProfileModule,
   ],
   controllers: [],
   providers: [],

@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { Game, UserGame, Platform } from '../../database/entities';
+import { Game, UserGame, Platform, User } from '../../database/entities';
 import { SteamService } from './steam.service';
 import { SteamImportService } from './steam-import.service';
 import { SteamController } from './steam.controller';
@@ -10,7 +10,7 @@ import { IgdbModule } from '../igdb/igdb.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Game, UserGame, Platform]),
+    TypeOrmModule.forFeature([Game, UserGame, Platform, User]),
     IgdbModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
