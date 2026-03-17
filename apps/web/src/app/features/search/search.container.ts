@@ -57,11 +57,18 @@ import { IgdbSearchResult } from '../../core/models';
                 <div class="text-sm mt-2">⭐ {{ game.rating | number:'1.0-0' }}</div>
               }
             </div>
-            <button
-              class="w-full py-3 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors"
-              (click)="openAddDialog(game)">
-              + Add to Library
-            </button>
+            <div class="flex">
+              <button
+                class="flex-1 py-3 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors"
+                (click)="openAddDialog(game, 'backlog')">
+                + Library
+              </button>
+              <button
+                class="flex-1 py-3 bg-purple-500 text-white font-medium hover:bg-purple-600 transition-colors border-l border-purple-400"
+                (click)="openAddDialog(game, 'wishlist')">
+                ♡ Wishlist
+              </button>
+            </div>
           </div>
         }
       </div>
@@ -71,11 +78,11 @@ import { IgdbSearchResult } from '../../core/models';
       }
     </div>
 
-    <!-- Add to Library Dialog -->
+    <!-- Add to Library/Wishlist Dialog -->
     @if (selectedGame()) {
       <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" (click)="closeAddDialog()">
         <div class="bg-white p-8 rounded-xl w-full max-w-md mx-4" (click)="$event.stopPropagation()">
-          <h2 class="text-xl font-bold mb-4">Add to Library</h2>
+          <h2 class="text-xl font-bold mb-4">{{ addStatus() === 'wishlist' ? 'Add to Wishlist' : 'Add to Library' }}</h2>
           <p class="mb-4">Adding: <strong>{{ selectedGame()!.name }}</strong></p>
 
           <label for="platform-select" class="block font-medium mb-2">Select Platform:</label>
@@ -95,10 +102,14 @@ import { IgdbSearchResult } from '../../core/models';
               Cancel
             </button>
             <button
-              class="flex-1 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="flex-1 py-3 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              [class.bg-blue-500]="addStatus() === 'backlog'"
+              [class.hover:bg-blue-600]="addStatus() === 'backlog'"
+              [class.bg-purple-500]="addStatus() === 'wishlist'"
+              [class.hover:bg-purple-600]="addStatus() === 'wishlist'"
               [disabled]="!selectedPlatformId() || adding()"
-              (click)="addToLibrary()">
-              {{ adding() ? 'Adding...' : 'Add to Library' }}
+              (click)="addGame()">
+              {{ adding() ? 'Adding...' : (addStatus() === 'wishlist' ? 'Add to Wishlist' : 'Add to Library') }}
             </button>
           </div>
         </div>
@@ -119,6 +130,7 @@ export class SearchContainer implements OnInit {
 
   selectedGame = signal<IgdbSearchResult | null>(null);
   selectedPlatformId = signal<number | null>(null);
+  addStatus = signal<'backlog' | 'wishlist'>('backlog');
   adding = signal(false);
 
   platforms = this.platformsService.platforms;
@@ -155,9 +167,10 @@ export class SearchContainer implements OnInit {
     this.searchSubject.next(query);
   }
 
-  openAddDialog(game: IgdbSearchResult) {
+  openAddDialog(game: IgdbSearchResult, status: 'backlog' | 'wishlist') {
     this.selectedGame.set(game);
     this.selectedPlatformId.set(null);
+    this.addStatus.set(status);
   }
 
   closeAddDialog() {
@@ -165,13 +178,14 @@ export class SearchContainer implements OnInit {
     this.selectedPlatformId.set(null);
   }
 
-  addToLibrary() {
+  addGame() {
     const game = this.selectedGame();
     const platformId = this.selectedPlatformId();
+    const status = this.addStatus();
     if (!game || !platformId) return;
 
     this.adding.set(true);
-    this.gamesService.addGame({ igdbId: game.id, platformId, status: 'backlog' }).subscribe({
+    this.gamesService.addGame({ igdbId: game.id, platformId, status }).subscribe({
       next: () => {
         this.adding.set(false);
         this.closeAddDialog();
