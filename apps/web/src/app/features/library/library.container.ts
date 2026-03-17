@@ -185,10 +185,8 @@ interface GroupedGame {
       }
 
       <!-- Results count -->
-      @if (!loading() && groupedGames().length > 0) {
-        <p class="text-sm text-gray-500 mb-4">
-          Showing {{ groupedGames().length }} of {{ totalGames() }} games
-        </p>
+      @if (!loading() && totalGames() > 0) {
+        <p class="text-sm text-gray-500 mb-4">{{ totalGames() }} games</p>
       }
 
       @if (loading()) {
