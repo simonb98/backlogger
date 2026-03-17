@@ -1,7 +1,9 @@
-import { Component, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { injectQuery, injectMutation, injectQueryClient } from '@tanstack/angular-query-experimental';
+import { lastValueFrom } from 'rxjs';
 import { GamesService, PlatformsService } from '../../core/services';
 import { UserGame, GameStatus, Game, Platform, GAME_STATUS_LABELS, GAME_STATUS_COLORS, GameFilterParams } from '../../core/models';
 
@@ -60,7 +62,7 @@ interface GroupedGame {
             class="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
           />
           <!-- Sort -->
-          <select [ngModel]="sortBy()" (ngModelChange)="sortBy.set($event); loadGames()"
+          <select [ngModel]="sortBy()" (ngModelChange)="sortBy.set($event); currentPage.set(1)"
                   class="px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-blue-500">
             <option value="date_added">Date Added</option>
             <option value="name">Name</option>
@@ -97,7 +99,7 @@ interface GroupedGame {
           <span class="text-gray-300 mx-2">|</span>
 
           <span class="text-sm text-gray-500 mr-2">Platform:</span>
-          <select [ngModel]="selectedPlatform()" (ngModelChange)="selectedPlatform.set($event); loadGames()"
+          <select [ngModel]="selectedPlatform()" (ngModelChange)="selectedPlatform.set($event); currentPage.set(1)"
                   class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none">
             <option [ngValue]="null">All Platforms</option>
             @for (platform of platforms(); track platform.id) {
@@ -265,14 +267,10 @@ interface GroupedGame {
     </div>
   `,
 })
-export class LibraryContainer implements OnInit {
+export class LibraryContainer {
   private gamesService = inject(GamesService);
   private platformsService = inject(PlatformsService);
-
-  games = signal<UserGame[]>([]);
-  totalGames = signal(0);
-  loading = signal(true);
-  error = signal<string | null>(null);
+  private queryClient = injectQueryClient();
 
   // Filters
   selectedStatus = signal<GameStatus | null>(null);
@@ -284,10 +282,6 @@ export class LibraryContainer implements OnInit {
   // Pagination
   perPage = signal(50);
   currentPage = signal(1);
-  totalPages = computed(() => {
-    if (this.perPage() === 0) return 1;
-    return Math.ceil(this.totalGames() / this.perPage());
-  });
 
   // Selection
   selectMode = signal(false);
@@ -301,9 +295,98 @@ export class LibraryContainer implements OnInit {
   readonly statuses: GameStatus[] = ['playing', 'up_next', 'backlog', 'completed', 'on_hold', 'dropped', 'wishlist'];
   readonly statusPriority: GameStatus[] = ['playing', 'up_next', 'backlog', 'on_hold', 'wishlist', 'completed', 'dropped'];
 
-  Math = Math; // For template access
+  Math = Math;
 
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  // Query for games with reactive filters
+  gamesQuery = injectQuery(() => ({
+    queryKey: ['games', {
+      status: this.selectedStatus(),
+      platform: this.selectedPlatform(),
+      search: this.searchQuery(),
+      sortBy: this.sortBy(),
+      sortOrder: this.sortOrder(),
+      page: this.currentPage(),
+      limit: this.perPage(),
+    }],
+    queryFn: async () => {
+      const limit = this.perPage();
+
+      // Handle "All" option - fetch all pages
+      if (limit === 0) {
+        return this.fetchAllGames();
+      }
+
+      const filters: GameFilterParams = {
+        sortBy: this.sortBy(),
+        sortOrder: this.sortOrder(),
+        limit,
+        page: this.currentPage(),
+      };
+
+      if (this.selectedStatus()) filters.status = this.selectedStatus()!;
+      if (this.selectedPlatform()) filters.platform = this.selectedPlatform()!;
+      if (this.searchQuery()) filters.search = this.searchQuery();
+
+      const response = await lastValueFrom(this.gamesService.getGames(filters));
+      return {
+        games: response.data || [],
+        total: response.meta?.total || response.data?.length || 0,
+        totalPages: response.meta?.totalPages || 1,
+      };
+    },
+  }));
+
+  // Mutation for bulk updates
+  bulkUpdateMutation = injectMutation(() => ({
+    mutationFn: async ({ ids, updates }: { ids: number[]; updates: { status: GameStatus } }) => {
+      return lastValueFrom(this.gamesService.bulkUpdateGames(ids, updates));
+    },
+    onSuccess: () => {
+      this.queryClient.invalidateQueries({ queryKey: ['games'] });
+      this.exitSelectMode();
+    },
+  }));
+
+  private async fetchAllGames(): Promise<{ games: UserGame[]; total: number; totalPages: number }> {
+    const allGames: UserGame[] = [];
+    let page = 1;
+    let totalPages = 1;
+    let total = 0;
+
+    do {
+      const filters: GameFilterParams = {
+        sortBy: this.sortBy(),
+        sortOrder: this.sortOrder(),
+        limit: 100,
+        page,
+      };
+
+      if (this.selectedStatus()) filters.status = this.selectedStatus()!;
+      if (this.selectedPlatform()) filters.platform = this.selectedPlatform()!;
+      if (this.searchQuery()) filters.search = this.searchQuery();
+
+      const response = await lastValueFrom(this.gamesService.getGames(filters));
+      allGames.push(...(response.data || []));
+      totalPages = response.meta?.totalPages || 1;
+      total = response.meta?.total || allGames.length;
+      page++;
+    } while (page <= totalPages);
+
+    return { games: allGames, total, totalPages: 1 };
+  }
+
+  // Computed values from query
+  games = computed(() => this.gamesQuery.data()?.games || []);
+  totalGames = computed(() => this.gamesQuery.data()?.total || 0);
+  loading = computed(() => this.gamesQuery.isPending());
+  error = computed(() => this.gamesQuery.error() ? 'Failed to load games' : null);
+
+  totalPages = computed(() => {
+    if (this.perPage() === 0) return 1;
+    return Math.ceil(this.totalGames() / this.perPage());
+  });
 
   hasActiveFilters = computed(() =>
     this.selectedStatus() !== null ||
@@ -333,7 +416,6 @@ export class LibraryContainer implements OnInit {
         if (userGame.completionPercent === 100) {
           existing.isFullyCompleted = true;
         }
-        // Update primary status based on priority
         const currentPriority = this.statusPriority.indexOf(existing.primaryStatus);
         const newPriority = this.statusPriority.indexOf(userGame.status);
         if (newPriority < currentPriority) {
@@ -355,96 +437,25 @@ export class LibraryContainer implements OnInit {
     return Array.from(groups.values());
   });
 
-  ngOnInit() {
+  constructor() {
     this.platformsService.loadPlatforms();
-    this.loadGames();
   }
 
-  loadGames() {
-    this.loading.set(true);
-    this.error.set(null);
-
-    const limit = this.perPage();
-
-    // If "All" is selected (0), load all pages recursively
-    if (limit === 0) {
-      this.loadAllGames();
-      return;
-    }
-
-    const filters: GameFilterParams = {
-      sortBy: this.sortBy(),
-      sortOrder: this.sortOrder(),
-      limit: limit,
-      page: this.currentPage(),
-    };
-
-    if (this.selectedStatus()) filters.status = this.selectedStatus()!;
-    if (this.selectedPlatform()) filters.platform = this.selectedPlatform()!;
-    if (this.searchQuery()) filters.search = this.searchQuery();
-
-    this.gamesService.getGames(filters).subscribe({
-      next: (response) => {
-        this.games.set(response.data || []);
-        this.totalGames.set(response.meta?.total || response.data?.length || 0);
-        this.loading.set(false);
-      },
-      error: (err) => {
-        this.error.set('Failed to load games');
-        this.loading.set(false);
-      },
-    });
-  }
-
-  private loadAllGames(page = 1, accumulated: UserGame[] = []) {
-    const filters: GameFilterParams = {
-      sortBy: this.sortBy(),
-      sortOrder: this.sortOrder(),
-      limit: 100,
-      page: page,
-    };
-
-    if (this.selectedStatus()) filters.status = this.selectedStatus()!;
-    if (this.selectedPlatform()) filters.platform = this.selectedPlatform()!;
-    if (this.searchQuery()) filters.search = this.searchQuery();
-
-    this.gamesService.getGames(filters).subscribe({
-      next: (response) => {
-        const allSoFar = [...accumulated, ...(response.data || [])];
-        const totalPages = response.meta?.totalPages || 1;
-
-        if (page < totalPages) {
-          this.loadAllGames(page + 1, allSoFar);
-        } else {
-          this.games.set(allSoFar);
-          this.totalGames.set(response.meta?.total || allSoFar.length);
-          this.loading.set(false);
-        }
-      },
-      error: (err) => {
-        this.error.set('Failed to load games');
-        this.loading.set(false);
-      },
-    });
-  }
-
+  // Filter methods - just update signals, query auto-refetches
   setStatus(status: GameStatus | null) {
     this.selectedStatus.set(status);
     this.currentPage.set(1);
-    this.loadGames();
   }
 
   toggleSortOrder() {
     this.sortOrder.set(this.sortOrder() === 'asc' ? 'desc' : 'asc');
     this.currentPage.set(1);
-    this.loadGames();
   }
 
   debouncedSearch() {
     if (this.searchTimeout) clearTimeout(this.searchTimeout);
     this.searchTimeout = setTimeout(() => {
       this.currentPage.set(1);
-      this.loadGames();
     }, 300);
   }
 
@@ -453,19 +464,16 @@ export class LibraryContainer implements OnInit {
     this.selectedPlatform.set(null);
     this.searchQuery.set('');
     this.currentPage.set(1);
-    this.loadGames();
   }
 
   setPerPage(value: number) {
     this.perPage.set(value);
     this.currentPage.set(1);
-    this.loadGames();
   }
 
   goToPage(page: number) {
     if (page < 1 || page > this.totalPages()) return;
     this.currentPage.set(page);
-    this.loadGames();
   }
 
   formatPlaytime(mins: number): string {
@@ -485,23 +493,18 @@ export class LibraryContainer implements OnInit {
   }
 
   handleSelect(event: MouseEvent, id: number, index: number) {
-    // Prevent text selection on shift-click
     event.preventDefault();
-
     const games = this.groupedGames();
     const current = new Set(this.selectedIds());
 
     if (event.shiftKey && this.lastSelectedIndex !== null) {
-      // Shift-click: select range
       const start = Math.min(this.lastSelectedIndex, index);
       const end = Math.max(this.lastSelectedIndex, index);
-
       for (let i = start; i <= end; i++) {
         current.add(games[i].entries[0].id);
       }
       this.selectedIds.set(current);
     } else {
-      // Normal click: toggle single item
       if (current.has(id)) {
         current.delete(id);
       } else {
@@ -530,17 +533,7 @@ export class LibraryContainer implements OnInit {
   bulkSetStatus(status: GameStatus) {
     const ids = Array.from(this.selectedIds());
     if (ids.length === 0) return;
-
-    this.gamesService.bulkUpdateGames(ids, { status }).subscribe({
-      next: () => {
-        this.exitSelectMode();
-        this.loadGames();
-      },
-      error: (err) => {
-        console.error('Bulk update failed:', err);
-        alert('Failed to update games');
-      },
-    });
+    this.bulkUpdateMutation.mutate({ ids, updates: { status } });
   }
 }
 

@@ -1,8 +1,9 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { debounceTime, distinctUntilChanged, Subject, switchMap, of } from 'rxjs';
+import { debounceTime, distinctUntilChanged, Subject, switchMap, of, lastValueFrom } from 'rxjs';
+import { injectQuery, injectMutation, injectQueryClient } from '@tanstack/angular-query-experimental';
 import { IgdbService, PlatformsService, GamesService } from '../../core/services';
 import { IgdbSearchResult } from '../../core/models';
 
@@ -146,11 +147,12 @@ import { IgdbSearchResult } from '../../core/models';
     }
   `,
 })
-export class SearchContainer implements OnInit {
+export class SearchContainer {
   private igdbService = inject(IgdbService);
   private platformsService = inject(PlatformsService);
   private gamesService = inject(GamesService);
   private router = inject(Router);
+  private queryClient = injectQueryClient();
 
   searchQuery = signal('');
   results = signal<IgdbSearchResult[]>([]);
@@ -160,16 +162,37 @@ export class SearchContainer implements OnInit {
   selectedGame = signal<IgdbSearchResult | null>(null);
   selectedPlatformId = signal<number | null>(null);
   addStatus = signal<'backlog' | 'wishlist'>('backlog');
-  adding = signal(false);
   addedGameIds = new Set<number>();
-
-  popularGames = signal<IgdbSearchResult[]>([]);
-  loadingPopular = signal(false);
 
   platforms = this.platformsService.platforms;
 
+  // Popular games query
+  popularGamesQuery = injectQuery(() => ({
+    queryKey: ['popular-games'],
+    queryFn: () => lastValueFrom(this.igdbService.getPopular(20)),
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  }));
+
+  popularGames = computed(() => this.popularGamesQuery.data() || []);
+  loadingPopular = computed(() => this.popularGamesQuery.isPending());
+
+  // Add game mutation
+  addGameMutation = injectMutation(() => ({
+    mutationFn: (data: { igdbId: number; platformId: number; status: 'backlog' | 'wishlist' }) =>
+      lastValueFrom(this.gamesService.addGame(data)),
+    onSuccess: (_result, variables) => {
+      this.addedGameIds.add(variables.igdbId);
+      this.queryClient.invalidateQueries({ queryKey: ['games'] });
+      this.closeAddDialog();
+    },
+    onError: (err: any) => {
+      alert(err.error?.error?.message || 'Failed to add game');
+    },
+  }));
+
+  adding = computed(() => this.addGameMutation.isPending());
+
   // Filter platforms to only show ones available for the selected game
-  // The API now returns our platform IDs (not IGDB IDs) after mapping
   availablePlatforms = computed(() => {
     const game = this.selectedGame();
     const allPlatforms = this.platforms();
@@ -181,10 +204,10 @@ export class SearchContainer implements OnInit {
 
   private searchSubject = new Subject<string>();
 
-  ngOnInit() {
+  constructor() {
     this.platformsService.loadPlatforms();
-    this.loadPopularGames();
 
+    // Search still uses RxJS for debouncing
     this.searchSubject.pipe(
       debounceTime(300),
       distinctUntilChanged(),
@@ -199,22 +222,9 @@ export class SearchContainer implements OnInit {
         this.results.set(results);
         this.loading.set(false);
       },
-      error: (err) => {
+      error: () => {
         this.error.set('Failed to search games. Please try again.');
         this.loading.set(false);
-      }
-    });
-  }
-
-  private loadPopularGames() {
-    this.loadingPopular.set(true);
-    this.igdbService.getPopular(20).subscribe({
-      next: (games) => {
-        this.popularGames.set(games);
-        this.loadingPopular.set(false);
-      },
-      error: () => {
-        this.loadingPopular.set(false);
       }
     });
   }
@@ -250,18 +260,7 @@ export class SearchContainer implements OnInit {
   }
 
   private addGameDirectly(game: IgdbSearchResult, platformId: number, status: 'backlog' | 'wishlist') {
-    this.adding.set(true);
-    this.gamesService.addGame({ igdbId: game.id, platformId, status }).subscribe({
-      next: () => {
-        this.adding.set(false);
-        // Mark this game as added so user sees feedback
-        this.addedGameIds.add(game.id);
-      },
-      error: (err) => {
-        this.adding.set(false);
-        alert(err.error?.error?.message || 'Failed to add game');
-      }
-    });
+    this.addGameMutation.mutate({ igdbId: game.id, platformId, status });
   }
 
   addGame() {
@@ -270,19 +269,7 @@ export class SearchContainer implements OnInit {
     const status = this.addStatus();
     if (!game || !platformId) return;
 
-    this.adding.set(true);
-    this.gamesService.addGame({ igdbId: game.id, platformId, status }).subscribe({
-      next: () => {
-        this.adding.set(false);
-        // Mark this game as added so user sees feedback
-        this.addedGameIds.add(game.id);
-        this.closeAddDialog();
-      },
-      error: (err) => {
-        this.adding.set(false);
-        alert(err.error?.error?.message || 'Failed to add game');
-      }
-    });
+    this.addGameMutation.mutate({ igdbId: game.id, platformId, status });
   }
 }
 
