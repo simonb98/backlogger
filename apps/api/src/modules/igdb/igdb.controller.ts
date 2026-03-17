@@ -2,18 +2,22 @@ import { Controller, Get, Query, Param, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { IgdbService, IgdbGame } from './igdb.service';
 import { IgdbSearchDto, IgdbSearchResultDto } from './dto/igdb-search.dto';
+import { PlatformsService } from '../platforms/platforms.service';
 
 @ApiTags('IGDB')
 @Controller('igdb')
 export class IgdbController {
-  constructor(private readonly igdbService: IgdbService) {}
+  constructor(
+    private readonly igdbService: IgdbService,
+    private readonly platformsService: PlatformsService,
+  ) {}
 
   @Get('search')
   @ApiOperation({ summary: 'Search for games on IGDB' })
   @ApiResponse({ status: 200, description: 'Search results', type: [IgdbSearchResultDto] })
   async search(@Query() query: IgdbSearchDto): Promise<IgdbSearchResultDto[]> {
     const results = await this.igdbService.search(query.q, query.limit);
-    return results.map((game) => this.mapToSearchResult(game));
+    return Promise.all(results.map((game) => this.mapToSearchResult(game)));
   }
 
   @Get('game/:igdbId')
@@ -26,7 +30,11 @@ export class IgdbController {
     return this.mapToFullGame(game);
   }
 
-  private mapToSearchResult(game: IgdbGame): IgdbSearchResultDto {
+  private async mapToSearchResult(game: IgdbGame): Promise<IgdbSearchResultDto> {
+    // Map IGDB platforms to our supported platforms
+    const igdbPlatformIds = game.platforms?.map((p) => p.id) || [];
+    const mappedPlatforms = await this.platformsService.mapIgdbPlatforms(igdbPlatformIds);
+
     return {
       id: game.id,
       name: game.name,
@@ -37,8 +45,8 @@ export class IgdbController {
       releaseYear: game.first_release_date
         ? new Date(game.first_release_date * 1000).getFullYear()
         : undefined,
-      platforms: game.platforms?.map((p) => ({
-        id: p.id,
+      platforms: mappedPlatforms.map((p) => ({
+        id: p.id, // Our platform ID, not IGDB ID
         name: p.name,
         abbreviation: p.abbreviation,
       })),

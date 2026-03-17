@@ -136,13 +136,14 @@ export class SearchContainer implements OnInit {
   platforms = this.platformsService.platforms;
 
   // Filter platforms to only show ones available for the selected game
+  // The API now returns our platform IDs (not IGDB IDs) after mapping
   availablePlatforms = computed(() => {
     const game = this.selectedGame();
     const allPlatforms = this.platforms();
     if (!game?.platforms?.length) return allPlatforms;
 
     const gamePlatformIds = new Set(game.platforms.map(p => p.id));
-    return allPlatforms.filter(p => p.igdbId && gamePlatformIds.has(p.igdbId));
+    return allPlatforms.filter(p => gamePlatformIds.has(p.id));
   });
 
   private searchSubject = new Subject<string>();
@@ -182,14 +183,12 @@ export class SearchContainer implements OnInit {
   }
 
   openAddDialog(game: IgdbSearchResult, status: 'backlog' | 'wishlist') {
-    // Check if game has only one platform that we support
-    const allPlatforms = this.platforms();
-    const gamePlatformIds = new Set(game.platforms?.map(p => p.id) || []);
-    const matchingPlatforms = allPlatforms.filter(p => p.igdbId && gamePlatformIds.has(p.igdbId));
+    // The API returns our platform IDs (already mapped from IGDB)
+    const gamePlatforms = game.platforms || [];
 
-    if (matchingPlatforms.length === 1) {
+    if (gamePlatforms.length === 1) {
       // Auto-add with the single platform
-      this.addGameDirectly(game, matchingPlatforms[0].id, status);
+      this.addGameDirectly(game, gamePlatforms[0].id, status);
     } else {
       // Show dialog to select platform
       this.selectedGame.set(game);
