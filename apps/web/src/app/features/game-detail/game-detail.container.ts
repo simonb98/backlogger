@@ -18,20 +18,20 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
   template: `
     <div class="max-w-6xl mx-auto p-6">
       @if (loading()) {
-        <div class="text-center py-12 text-gray-500">Loading game...</div>
+        <div class="text-center py-12 text-gray-500 dark:text-gray-400">Loading game...</div>
       } @else if (error()) {
-        <div class="text-center py-12 text-red-600">{{ error() }}</div>
+        <div class="text-center py-12 text-red-600 dark:text-red-400">{{ error() }}</div>
       } @else if (userGame(); as game) {
         <!-- Header -->
         <header class="flex justify-between items-center mb-8">
           <button
-            class="px-4 py-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+            class="px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             (click)="goBack()"
           >
             ← Back
           </button>
           <button
-            class="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+            class="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50"
             (click)="showDeleteConfirm.set(true)"
           >
             🗑️ Remove
@@ -41,7 +41,7 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
         <div class="grid md:grid-cols-[300px_1fr] gap-8">
           <!-- Left: Cover & Screenshots -->
           <aside>
-            <div class="rounded-xl overflow-hidden bg-gray-100 aspect-[3/4] mb-4">
+            <div class="rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 aspect-[3/4] mb-4">
               @if (game.game?.coverUrl) {
                 <img
                   [src]="game.game?.coverUrl"
@@ -63,16 +63,16 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
 
           <!-- Right: Details & Edit Form -->
           <main>
-            <h1 class="text-3xl font-bold mb-2">{{ game.game?.name }}</h1>
+            <h1 class="text-3xl font-bold mb-2 dark:text-white">{{ game.game?.name }}</h1>
 
-            <div class="flex flex-wrap gap-3 items-center text-gray-500 mb-4">
+            <div class="flex flex-wrap gap-3 items-center text-gray-500 dark:text-gray-400 mb-4">
               @if (releaseYear()) {
                 <span>{{ releaseYear() }}</span>
               }
               @if (game.game?.developer) {
                 <span>by {{ game.game?.developer }}</span>
               }
-              <span class="px-3 py-1 bg-gray-200 rounded-full text-sm">{{
+              <span class="px-3 py-1 bg-gray-200 dark:bg-gray-700 dark:text-gray-300 rounded-full text-sm">{{
                 game.platform?.name
               }}</span>
             </div>
@@ -80,7 +80,7 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
             @if (game.game?.genres?.length) {
               <div class="flex flex-wrap gap-2 mb-4">
                 @for (genre of game.game?.genres ?? []; track genre) {
-                  <span class="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm">{{
+                  <span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-sm">{{
                     genre
                   }}</span>
                 }
@@ -88,13 +88,13 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
             }
 
             @if (game.game?.summary) {
-              <p class="text-gray-600 leading-relaxed mb-6">{{ game.game?.summary }}</p>
+              <p class="text-gray-600 dark:text-gray-300 leading-relaxed mb-6">{{ game.game?.summary }}</p>
             }
 
             <!-- Edit Form -->
-            <section class="bg-white p-6 rounded-xl shadow-sm mb-6">
+            <section class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm mb-6">
               <div class="flex items-center justify-between mb-6">
-                <h2 class="text-xl font-semibold">Your Progress</h2>
+                <h2 class="text-xl font-semibold dark:text-white">Your Progress</h2>
                 @if (saving()) {
                   <span class="text-sm text-gray-400">Saving...</span>
                 }
@@ -102,7 +102,7 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
 
               <!-- Status -->
               <div class="mb-6">
-                <label class="block font-medium text-gray-700 mb-2">Status</label>
+                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
                 <div class="flex flex-wrap gap-2">
                   @for (status of statuses; track status) {
                     <button
@@ -110,7 +110,7 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
                       [class]="
                         editedStatus() === status
                           ? 'text-white border-transparent'
-                          : 'bg-white border-gray-200 hover:border-gray-300'
+                          : 'bg-white dark:bg-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                       "
                       [style.backgroundColor]="
                         editedStatus() === status ? statusColors[status] : ''
@@ -125,7 +125,7 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
 
               <!-- Rating -->
               <div class="mb-6">
-                <label class="block font-medium text-gray-700 mb-2">Your Rating</label>
+                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-2">Your Rating</label>
                 <app-star-rating
                   [rating]="editedRating()"
                   (ratingChange)="setRating($event)" />
@@ -133,7 +133,7 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
 
               <!-- Completion -->
               <div class="mb-6">
-                <label class="block font-medium text-gray-700 mb-2"
+                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-2"
                   >Completion: {{ editedCompletionPercent() }}%</label
                 >
                 <input
@@ -143,41 +143,41 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
                   [value]="editedCompletionPercent()"
                   (input)="editedCompletionPercent.set(+$any($event.target).value)"
                   (change)="saveField('completionPercent', editedCompletionPercent())"
-                  class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  class="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
                 />
               </div>
 
               <!-- Playtime -->
               <div class="flex justify-between items-center mb-6">
-                <label class="font-medium text-gray-700">Total Playtime</label>
-                <span class="text-lg font-semibold text-blue-600">{{
+                <label class="font-medium text-gray-700 dark:text-gray-300">Total Playtime</label>
+                <span class="text-lg font-semibold text-blue-600 dark:text-blue-400">{{
                   formatPlaytime(game.totalPlaytimeMins)
                 }}</span>
               </div>
 
               <!-- Notes -->
               <div class="mb-6">
-                <label class="block font-medium text-gray-700 mb-2">Notes</label>
+                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</label>
                 <textarea
                   [value]="editedNotes()"
                   (input)="editedNotes.set($any($event.target).value)"
                   (blur)="saveField('notes', editedNotes() || undefined)"
                   placeholder="Personal notes..."
                   rows="3"
-                  class="w-full p-3 border-2 border-gray-200 rounded-lg resize-y focus:outline-none focus:border-blue-500"
+                  class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg resize-y bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:border-blue-500"
                 ></textarea>
               </div>
 
               <!-- Review -->
               <div class="mb-6">
-                <label class="block font-medium text-gray-700 mb-2">Review</label>
+                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-2">Review</label>
                 <textarea
                   [value]="editedReview()"
                   (input)="editedReview.set($any($event.target).value)"
                   (blur)="saveField('review', editedReview() || undefined)"
                   placeholder="Write your review..."
                   rows="4"
-                  class="w-full p-3 border-2 border-gray-200 rounded-lg resize-y focus:outline-none focus:border-blue-500"
+                  class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg resize-y bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:border-blue-500"
                 ></textarea>
               </div>
             </section>
@@ -185,16 +185,16 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
             <!-- Dates -->
             <div class="flex gap-8 flex-wrap text-center">
               <div>
-                <span class="block text-sm text-gray-500">Added</span
-                ><span class="font-semibold">{{ formatDate(game.dateAdded) }}</span>
+                <span class="block text-sm text-gray-500 dark:text-gray-400">Added</span
+                ><span class="font-semibold dark:text-white">{{ formatDate(game.dateAdded) }}</span>
               </div>
               <div>
-                <span class="block text-sm text-gray-500">Started</span
-                ><span class="font-semibold">{{ formatDate(game.dateStarted) }}</span>
+                <span class="block text-sm text-gray-500 dark:text-gray-400">Started</span
+                ><span class="font-semibold dark:text-white">{{ formatDate(game.dateStarted) }}</span>
               </div>
               <div>
-                <span class="block text-sm text-gray-500">Completed</span
-                ><span class="font-semibold">{{ formatDate(game.dateCompleted) }}</span>
+                <span class="block text-sm text-gray-500 dark:text-gray-400">Completed</span
+                ><span class="font-semibold dark:text-white">{{ formatDate(game.dateCompleted) }}</span>
               </div>
             </div>
           </main>
@@ -209,17 +209,17 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
         (click)="showDeleteConfirm.set(false)"
       >
         <div
-          class="bg-white p-8 rounded-xl max-w-md w-full mx-4"
+          class="bg-white dark:bg-gray-800 p-8 rounded-xl max-w-md w-full mx-4"
           (click)="$event.stopPropagation()"
         >
-          <h2 class="text-xl font-bold mb-2">Remove Game?</h2>
-          <p class="text-gray-500 mb-6">
-            Are you sure you want to remove <strong>{{ userGame()?.game?.name }}</strong> from your
+          <h2 class="text-xl font-bold mb-2 dark:text-white">Remove Game?</h2>
+          <p class="text-gray-500 dark:text-gray-400 mb-6">
+            Are you sure you want to remove <strong class="dark:text-white">{{ userGame()?.game?.name }}</strong> from your
             library?
           </p>
           <div class="flex gap-4">
             <button
-              class="flex-1 py-3 bg-gray-100 rounded-lg font-medium hover:bg-gray-200"
+              class="flex-1 py-3 bg-gray-100 dark:bg-gray-700 dark:text-white rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
               (click)="showDeleteConfirm.set(false)"
             >
               Cancel

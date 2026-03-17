@@ -17,7 +17,7 @@ import { Component, computed, input, output } from '@angular/core';
         </button>
       }
       @if (showValue() && rating()) {
-        <span class="ml-2 font-semibold text-gray-700">{{ rating() }}/{{ maxRating() }}</span>
+        <span class="ml-2 font-semibold text-gray-700 dark:text-gray-300">{{ rating() }}/{{ maxRating() }}</span>
       }
     </div>
   `,

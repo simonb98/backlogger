@@ -39,7 +39,7 @@ import { Component, computed, input, signal } from '@angular/core';
           }
         }
       } @else {
-        <div class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
+        <div class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100 dark:bg-gray-700">
           No screenshots
         </div>
       }
