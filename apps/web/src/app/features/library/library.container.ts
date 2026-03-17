@@ -1,5 +1,5 @@
-import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { CommonModule, DOCUMENT } from '@angular/common';
+import { Component, computed, signal, inject, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
@@ -84,7 +84,7 @@ interface GroupedGame {
           <!-- Sort -->
           <select
             [ngModel]="sortBy()"
-            (ngModelChange)="sortBy.set($event); currentPage.set(1)"
+            (ngModelChange)="sortBy.set($event); resetDisplayCount()"
             class="px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-blue-500"
           >
             <option value="date_added">Date Added</option>
@@ -130,7 +130,7 @@ interface GroupedGame {
           <span class="text-sm text-gray-500 mr-2">Platform:</span>
           <select
             [ngModel]="selectedPlatform()"
-            (ngModelChange)="selectedPlatform.set($event); currentPage.set(1)"
+            (ngModelChange)="selectedPlatform.set($event); resetDisplayCount()"
             class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none"
           >
             <option [ngValue]="null">All Platforms</option>
@@ -144,21 +144,6 @@ interface GroupedGame {
               Clear filters
             </button>
           }
-
-          <span class="text-gray-300 mx-2">|</span>
-
-          <!-- Per Page -->
-          <span class="text-sm text-gray-500 mr-2">Show:</span>
-          <select
-            [ngModel]="perPage()"
-            (ngModelChange)="setPerPage($event)"
-            class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none"
-          >
-            <option [ngValue]="20">20</option>
-            <option [ngValue]="50">50</option>
-            <option [ngValue]="100">100</option>
-            <option [ngValue]="0">All</option>
-          </select>
         </div>
       </div>
 
@@ -191,42 +176,11 @@ interface GroupedGame {
         </div>
       }
 
-      <!-- Results count & Pagination -->
+      <!-- Results count -->
       @if (!loading() && groupedGames().length > 0) {
-        <div class="flex items-center justify-between mb-4">
-          <p class="text-sm text-gray-500">
-            @if (perPage() === 0) {
-              {{ totalGames() }} games
-            } @else {
-              Showing {{ (currentPage() - 1) * perPage() + 1 }}-{{
-                Math.min(currentPage() * perPage(), totalGames())
-              }}
-              of {{ totalGames() }} games
-            }
-          </p>
-
-          @if (totalPages() > 1) {
-            <div class="flex items-center gap-2">
-              <button
-                (click)="goToPage(currentPage() - 1)"
-                [disabled]="currentPage() === 1"
-                class="px-3 py-1 rounded border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                ← Prev
-              </button>
-              <span class="text-sm text-gray-600"
-                >Page {{ currentPage() }} of {{ totalPages() }}</span
-              >
-              <button
-                (click)="goToPage(currentPage() + 1)"
-                [disabled]="currentPage() >= totalPages()"
-                class="px-3 py-1 rounded border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next →
-              </button>
-            </div>
-          }
-        </div>
+        <p class="text-sm text-gray-500 mb-4">
+          Showing {{ groupedGames().length }} of {{ totalGames() }} games
+        </p>
       }
 
       @if (loading()) {
@@ -340,10 +294,39 @@ interface GroupedGame {
           </div>
         }
       </div>
+
+      <!-- Load more trigger -->
+      @if (hasMoreGames() && !loading()) {
+        <div class="py-8 text-center">
+          @if (loadingMore()) {
+            <div class="text-gray-500">Loading more games...</div>
+          } @else {
+            <button
+              (click)="loadMore()"
+              class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Load More
+            </button>
+          }
+        </div>
+      }
     </div>
+
+    <!-- Back to top button -->
+    @if (showBackToTop()) {
+      <button
+        (click)="scrollToTop()"
+        class="fixed bottom-6 right-6 w-12 h-12 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all flex items-center justify-center text-xl z-50"
+        title="Back to top"
+      >
+        ↑
+      </button>
+    }
   `,
 })
 export class LibraryContainer {
+  private document = inject(DOCUMENT);
+
   // Filters
   selectedStatus = signal<GameStatus | null>(null);
   selectedPlatform = signal<number | null>(null);
@@ -351,9 +334,11 @@ export class LibraryContainer {
   sortBy = signal<SortField>('date_added');
   sortOrder = signal<SortOrder>('desc');
 
-  // Pagination
-  perPage = signal(50);
-  currentPage = signal(1);
+  // Infinite scroll - 5 rows * 6 columns = 30 games per page
+  private readonly ITEMS_PER_PAGE = 30;
+  displayedCount = signal(30);
+  loadingMore = signal(false);
+  showBackToTop = signal(false);
 
   // Selection
   selectMode = signal(false);
@@ -363,14 +348,14 @@ export class LibraryContainer {
   // Use client libs
   platforms = injectPlatforms();
 
+  // Fetch all games at once, display is controlled by displayedCount
   gamesQuery = injectGamesQuery(() => ({
     status: this.selectedStatus() ?? undefined,
     platform: this.selectedPlatform() ?? undefined,
     search: this.searchQuery() || undefined,
     sortBy: this.sortBy(),
     sortOrder: this.sortOrder(),
-    page: this.currentPage(),
-    limit: this.perPage(),
+    limit: 0, // Fetch all
   }));
 
   bulkUpdateMutation = injectBulkUpdateGamesMutation({
@@ -402,15 +387,20 @@ export class LibraryContainer {
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Computed values from query
-  games = computed(() => this.gamesQuery.data()?.games || []);
+  allGames = computed(() => this.gamesQuery.data()?.games || []);
   totalGames = computed(() => this.gamesQuery.data()?.total || 0);
   loading = computed(() => this.gamesQuery.isPending());
   error = computed(() => (this.gamesQuery.error() ? 'Failed to load games' : null));
 
-  totalPages = computed(() => {
-    if (this.perPage() === 0) return 1;
-    return Math.ceil(this.totalGames() / this.perPage());
-  });
+  // Slice games for infinite scroll
+  games = computed(() => this.allGames().slice(0, this.displayedCount()));
+  hasMoreGames = computed(() => this.displayedCount() < this.allGames().length);
+
+  @HostListener('window:scroll')
+  onScroll() {
+    const scrollTop = this.document.documentElement.scrollTop || this.document.body.scrollTop;
+    this.showBackToTop.set(scrollTop > 400);
+  }
 
   hasActiveFilters = computed(
     () =>
@@ -470,18 +460,18 @@ export class LibraryContainer {
   // Filter methods - just update signals, query auto-refetches
   setStatus(status: GameStatus | null) {
     this.selectedStatus.set(status);
-    this.currentPage.set(1);
+    this.resetDisplayCount();
   }
 
   toggleSortOrder() {
     this.sortOrder.set(this.sortOrder() === 'asc' ? 'desc' : 'asc');
-    this.currentPage.set(1);
+    this.resetDisplayCount();
   }
 
   debouncedSearch() {
     if (this.searchTimeout) clearTimeout(this.searchTimeout);
     this.searchTimeout = setTimeout(() => {
-      this.currentPage.set(1);
+      this.resetDisplayCount();
     }, 300);
   }
 
@@ -489,17 +479,25 @@ export class LibraryContainer {
     this.selectedStatus.set(null);
     this.selectedPlatform.set(null);
     this.searchQuery.set('');
-    this.currentPage.set(1);
+    this.resetDisplayCount();
   }
 
-  setPerPage(value: number) {
-    this.perPage.set(value);
-    this.currentPage.set(1);
+  // Infinite scroll methods
+  resetDisplayCount() {
+    this.displayedCount.set(this.ITEMS_PER_PAGE);
   }
 
-  goToPage(page: number) {
-    if (page < 1 || page > this.totalPages()) return;
-    this.currentPage.set(page);
+  loadMore() {
+    this.loadingMore.set(true);
+    // Simulate a small delay for UX
+    setTimeout(() => {
+      this.displayedCount.update(count => count + this.ITEMS_PER_PAGE);
+      this.loadingMore.set(false);
+    }, 200);
+  }
+
+  scrollToTop() {
+    this.document.defaultView?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   formatPlaytime(mins: number): string {
