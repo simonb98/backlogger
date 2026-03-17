@@ -1,7 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { SteamService, SteamProfileInfo, ImportResult, ImportProgress } from '../../core/services';
 
 @Component({
@@ -159,9 +160,10 @@ import { SteamService, SteamProfileInfo, ImportResult, ImportProgress } from '..
     </div>
   `,
 })
-export class ImportContainer {
+export class ImportContainer implements OnDestroy {
   private steamService = inject(SteamService);
   private router = inject(Router);
+  private importSubscription?: Subscription;
 
   steamInput = '';
   loading = signal(false);
@@ -175,6 +177,28 @@ export class ImportContainer {
   importedCount = signal(0);
   skippedCount = signal(0);
   failedCount = signal(0);
+
+  // Warn user before leaving during import
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.importing()) {
+      event.preventDefault();
+      event.returnValue = 'Import is in progress. Are you sure you want to leave?';
+    }
+  }
+
+  // Check if user can leave (used by route guard)
+  canDeactivate(): boolean {
+    if (this.importing()) {
+      return confirm('Import is in progress. If you leave, you will lose visibility of the progress (but the import will continue in the background). Leave anyway?');
+    }
+    return true;
+  }
+
+  ngOnDestroy(): void {
+    // Clean up subscription when component is destroyed
+    this.importSubscription?.unsubscribe();
+  }
 
   progressPercent(): number {
     const p = this.progress();
@@ -204,7 +228,7 @@ export class ImportContainer {
     this.skippedCount.set(0);
     this.failedCount.set(0);
 
-    this.steamService.importGamesWithProgress(this.steamInput).subscribe({
+    this.importSubscription = this.steamService.importGamesWithProgress(this.steamInput).subscribe({
       next: (progress) => {
         this.progress.set(progress);
 

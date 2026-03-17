@@ -1,4 +1,10 @@
-import { Routes } from '@angular/router';
+import { Routes, CanDeactivateFn } from '@angular/router';
+import type { ImportContainer } from './features/import/import.container';
+
+// Guard to prevent leaving import page during active import
+const canDeactivateImport: CanDeactivateFn<ImportContainer> = (component) => {
+  return component.canDeactivate();
+};
 
 export const routes: Routes = [
   { path: '', redirectTo: 'library', pathMatch: 'full' },
@@ -25,6 +31,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/import/import.container').then((m) => m.ImportContainer),
     title: 'Import from Steam - Backlogger',
+    canDeactivate: [canDeactivateImport],
   },
   {
     path: 'discover',
