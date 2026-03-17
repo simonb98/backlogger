@@ -2,7 +2,7 @@ import { Injectable, signal, computed, inject, PLATFORM_ID } from '@angular/core
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap, catchError, throwError } from 'rxjs';
+import { Observable, tap, catchError, throwError, map } from 'rxjs';
 import { User, LoginRequest, RegisterRequest, AuthResponse } from '../models';
 
 const TOKEN_KEY = 'backlogger-token';
@@ -43,8 +43,9 @@ export class AuthService {
   }
 
   login(credentials: LoginRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>('/api/auth/login', credentials).pipe(
-      tap(response => this.handleAuthSuccess(response)),
+    return this.http.post<{ success: boolean; data: AuthResponse }>('/api/v1/auth/login', credentials).pipe(
+      tap(response => this.handleAuthSuccess(response.data)),
+      map(response => response.data),
       catchError(error => {
         return throwError(() => error);
       }),
@@ -52,8 +53,9 @@ export class AuthService {
   }
 
   register(data: RegisterRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>('/api/auth/register', data).pipe(
-      tap(response => this.handleAuthSuccess(response)),
+    return this.http.post<{ success: boolean; data: AuthResponse }>('/api/v1/auth/register', data).pipe(
+      tap(response => this.handleAuthSuccess(response.data)),
+      map(response => response.data),
       catchError(error => {
         return throwError(() => error);
       }),
