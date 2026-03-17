@@ -1,7 +1,7 @@
-import { inject } from '@angular/core';
+import { inject, signal } from '@angular/core';
 import { injectMutation, injectQuery, QueryClient } from '@tanstack/angular-query-experimental';
-import { lastValueFrom } from 'rxjs';
-import { SteamService } from '../../core/services/steam.service';
+import { lastValueFrom, Subscription } from 'rxjs';
+import { SteamService, ImportProgress, ImportResult } from '../../core/services/steam.service';
 import { GAMES_QUERY_KEY } from '../client-games-api';
 
 export const STEAM_PROFILE_QUERY_KEY = 'steam-profile';
@@ -20,21 +20,75 @@ export function injectSteamProfileQuery(getSteamId: () => string | null) {
 }
 
 /**
- * Mutation for importing games from Steam (sync version)
+ * Mutation for looking up Steam profile
+ */
+export function injectSteamProfileMutation() {
+  const steamService = inject(SteamService);
+
+  return injectMutation(() => ({
+    mutationFn: (steamId: string) => lastValueFrom(steamService.getProfile(steamId)),
+  }));
+}
+
+/**
+ * Mutation for importing games from Steam with progress
+ * Returns an object with mutate function and progress tracking
  */
 export function injectSteamImportMutation() {
   const steamService = inject(SteamService);
   const queryClient = inject(QueryClient);
 
-  return injectMutation(() => ({
-    mutationFn: (steamId: string) => lastValueFrom(steamService.importGames(steamId)),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [GAMES_QUERY_KEY] });
-    },
-  }));
-}
+  let subscription: Subscription | null = null;
+  const isPending = signal(false);
+  const data = signal<ImportResult | null>(null);
+  const error = signal<Error | null>(null);
 
-// Note: The streaming import (importGamesWithProgress) uses SSE and is better
-// handled directly with the SteamService since it's not a traditional query/mutation pattern.
-// Components should use SteamService.importGamesWithProgress() directly for that.
+  const mutate = (
+    steamId: string,
+    options?: {
+      onProgress?: (progress: ImportProgress) => void;
+      onSuccess?: (result: ImportResult) => void;
+      onError?: (error: Error) => void;
+    }
+  ) => {
+    // Cancel any existing subscription
+    subscription?.unsubscribe();
+
+    isPending.set(true);
+    error.set(null);
+    data.set(null);
+
+    subscription = steamService.importGamesWithProgress(steamId).subscribe({
+      next: (progress) => {
+        options?.onProgress?.(progress);
+
+        if (progress.done && progress.result) {
+          data.set(progress.result);
+          isPending.set(false);
+          queryClient.invalidateQueries({ queryKey: [GAMES_QUERY_KEY] });
+          options?.onSuccess?.(progress.result);
+        }
+      },
+      error: (err) => {
+        error.set(err);
+        isPending.set(false);
+        options?.onError?.(err);
+      },
+    });
+  };
+
+  const cancel = () => {
+    subscription?.unsubscribe();
+    subscription = null;
+    isPending.set(false);
+  };
+
+  return {
+    mutate,
+    cancel,
+    isPending: () => isPending(),
+    data: () => data(),
+    error: () => error(),
+  };
+}
 

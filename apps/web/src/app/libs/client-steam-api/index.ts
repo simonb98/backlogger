@@ -5,15 +5,13 @@ export { STEAM_PROFILE_QUERY_KEY } from './steam.queries';
 export { injectSteamProfileQuery } from './steam.queries';
 
 // Mutations
-export { injectSteamImportMutation } from './steam.queries';
+export { injectSteamProfileMutation, injectSteamImportMutation } from './steam.queries';
 
-// Re-export types and service for SSE import
+// Re-export types
 export type {
   SteamProfile,
   SteamProfileInfo,
   ImportResult,
   ImportProgress,
 } from '../../core/services/steam.service';
-
-export { SteamService } from '../../core/services/steam.service';
 

@@ -1,9 +1,14 @@
-import { Component, inject, signal, OnDestroy, HostListener } from '@angular/core';
+import { Component, inject, signal, HostListener, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
-import { SteamService, SteamProfileInfo, ImportResult, ImportProgress } from '../../core/services';
+import {
+  injectSteamProfileMutation,
+  injectSteamImportMutation,
+  SteamProfileInfo,
+  ImportResult,
+  ImportProgress,
+} from '../../libs/client-steam-api';
 
 @Component({
   selector: 'app-import-container',
@@ -160,18 +165,22 @@ import { SteamService, SteamProfileInfo, ImportResult, ImportProgress } from '..
     </div>
   `,
 })
-export class ImportContainer implements OnDestroy {
-  private steamService = inject(SteamService);
+export class ImportContainer {
   private router = inject(Router);
-  private importSubscription?: Subscription;
+
+  // Use client libs
+  profileMutation = injectSteamProfileMutation();
+  importMutation = injectSteamImportMutation();
 
   steamInput = '';
-  loading = signal(false);
   importing = signal(false);
   error = signal<string | null>(null);
-  profile = signal<SteamProfileInfo | null>(null);
   importResult = signal<ImportResult | null>(null);
   progress = signal<ImportProgress | null>(null);
+
+  // Derived state from mutation
+  loading = computed(() => this.profileMutation.isPending());
+  profile = computed(() => this.profileMutation.data() ?? null);
 
   // Live counters
   importedCount = signal(0);
@@ -195,11 +204,6 @@ export class ImportContainer implements OnDestroy {
     return true;
   }
 
-  ngOnDestroy(): void {
-    // Clean up subscription when component is destroyed
-    this.importSubscription?.unsubscribe();
-  }
-
   progressPercent(): number {
     const p = this.progress();
     if (!p || p.total === 0) return 0;
@@ -207,17 +211,10 @@ export class ImportContainer implements OnDestroy {
   }
 
   lookupProfile() {
-    this.loading.set(true);
     this.error.set(null);
-
-    this.steamService.getProfile(this.steamInput).subscribe({
-      next: (info) => {
-        this.profile.set(info);
-        this.loading.set(false);
-      },
-      error: (err) => {
+    this.profileMutation.mutate(this.steamInput, {
+      onError: (err: any) => {
         this.error.set(err.error?.error?.message || 'Could not find Steam profile');
-        this.loading.set(false);
       },
     });
   }
@@ -228,8 +225,8 @@ export class ImportContainer implements OnDestroy {
     this.skippedCount.set(0);
     this.failedCount.set(0);
 
-    this.importSubscription = this.steamService.importGamesWithProgress(this.steamInput).subscribe({
-      next: (progress) => {
+    this.importMutation.mutate(this.steamInput, {
+      onProgress: (progress) => {
         this.progress.set(progress);
 
         // Update counters based on status
@@ -240,13 +237,12 @@ export class ImportContainer implements OnDestroy {
         } else if (progress.status === 'failed') {
           this.failedCount.update(c => c + 1);
         }
-
-        if (progress.done && progress.result) {
-          this.importResult.set(progress.result);
-          this.importing.set(false);
-        }
       },
-      error: (err) => {
+      onSuccess: (result) => {
+        this.importResult.set(result);
+        this.importing.set(false);
+      },
+      onError: (err) => {
         this.error.set(err.message || 'Import failed');
         this.importing.set(false);
       },
@@ -254,7 +250,7 @@ export class ImportContainer implements OnDestroy {
   }
 
   reset() {
-    this.profile.set(null);
+    this.profileMutation.reset();
     this.error.set(null);
   }
 
