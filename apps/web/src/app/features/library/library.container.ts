@@ -509,6 +509,10 @@ export class LibraryContainer implements AfterViewInit, OnDestroy {
   }
 
   private observeSentinel() {
+    // Disconnect previous observations
+    this.intersectionObserver?.disconnect();
+
+    // Re-observe if sentinel exists
     if (this.scrollSentinel?.nativeElement) {
       this.intersectionObserver?.observe(this.scrollSentinel.nativeElement);
     }
@@ -522,6 +526,8 @@ export class LibraryContainer implements AfterViewInit, OnDestroy {
 
   private loadMore() {
     this.displayedCount.update(count => count + this.ITEMS_PER_PAGE);
+    // Re-observe sentinel after loading more (element gets recreated)
+    setTimeout(() => this.observeSentinel(), 50);
   }
 
   scrollToTop() {
