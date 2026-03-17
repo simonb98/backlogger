@@ -34,7 +34,13 @@
 - Social features (friends, sharing)
 - Achievements tracking
 - "Up Next" feature (planning what to play next with tinder-like swiping)
+
+**TODO: **
+- move pagination to bottom
+- 5 games per row
+
 ---
+
 
 ## 2. Prerequisites
 

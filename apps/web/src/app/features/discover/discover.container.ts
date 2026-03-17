@@ -1,8 +1,12 @@
-import { Component, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { GamesService } from '../../core/services';
-import { UserGame, GAME_STATUS_LABELS } from '../../core/models';
+import {
+  injectGamesQuery,
+  injectUpdateGameMutation,
+  UserGame,
+  GAME_STATUS_LABELS,
+} from '../../libs/client-games-api';
 
 @Component({
   selector: 'app-discover-container',
@@ -177,12 +181,16 @@ import { UserGame, GAME_STATUS_LABELS } from '../../core/models';
     </div>
   `,
 })
-export class DiscoverContainer implements OnInit {
-  private gamesService = inject(GamesService);
+export class DiscoverContainer {
   private router = inject(Router);
 
-  allGames = signal<UserGame[]>([]);
-  loading = signal(true);
+  // Use client libs - fetch all games with limit 0
+  gamesQuery = injectGamesQuery(() => ({ limit: 0 }));
+  updateMutation = injectUpdateGameMutation();
+
+  allGames = computed(() => this.gamesQuery.data()?.games || []);
+  loading = computed(() => this.gamesQuery.isPending());
+
   currentIndex = signal(0);
   cardClass = signal('');
   activeScreenshot = signal(0);
@@ -193,7 +201,6 @@ export class DiscoverContainer implements OnInit {
     return this.shuffled(
       this.allGames().filter(g => {
         if (!validStatuses.includes(g.status)) return false;
-        // Exclude games that are snoozed (skippedUntil in the future)
         if (g.skippedUntil && new Date(g.skippedUntil) > now) return false;
         return true;
       })
@@ -205,30 +212,6 @@ export class DiscoverContainer implements OnInit {
   });
 
   private shuffledGames: UserGame[] = [];
-
-  ngOnInit() {
-    this.loadGames();
-  }
-
-  loadGames() {
-    this.loading.set(true);
-    this.loadAllPages();
-  }
-
-  private loadAllPages(page = 1, accumulated: UserGame[] = []) {
-    this.gamesService.getGames({ limit: 100, page }).subscribe({
-      next: (response) => {
-        const allSoFar = [...accumulated, ...(response.data || [])];
-        if (response.meta && page < response.meta.totalPages) {
-          this.loadAllPages(page + 1, allSoFar);
-        } else {
-          this.allGames.set(allSoFar);
-          this.loading.set(false);
-        }
-      },
-      error: () => this.loading.set(false),
-    });
-  }
 
   private shuffled(games: UserGame[]): UserGame[] {
     if (this.shuffledGames.length === 0) {
@@ -248,18 +231,16 @@ export class DiscoverContainer implements OnInit {
     skipUntil.setDate(skipUntil.getDate() + 30);
 
     setTimeout(() => {
-      this.gamesService.updateGame(game.id, { skippedUntil: skipUntil.toISOString() }).subscribe({
-        next: () => {
-          this.currentIndex.update(i => i + 1);
-          this.activeScreenshot.set(0);
-          this.cardClass.set('');
-        },
-        error: () => {
-          this.currentIndex.update(i => i + 1);
-          this.activeScreenshot.set(0);
-          this.cardClass.set('');
+      this.updateMutation.mutate(
+        { id: game.id, updates: { skippedUntil: skipUntil.toISOString() } },
+        {
+          onSettled: () => {
+            this.currentIndex.update(i => i + 1);
+            this.activeScreenshot.set(0);
+            this.cardClass.set('');
+          },
         }
-      });
+      );
     }, 200);
   }
 
@@ -269,13 +250,16 @@ export class DiscoverContainer implements OnInit {
 
     this.cardClass.set('translate-x-full rotate-[20deg] opacity-0');
     setTimeout(() => {
-      this.gamesService.updateGame(game.id, { status: 'up_next' }).subscribe({
-        next: () => {
-          this.currentIndex.update(i => i + 1);
-          this.activeScreenshot.set(0);
-          this.cardClass.set('');
-        },
-      });
+      this.updateMutation.mutate(
+        { id: game.id, updates: { status: 'up_next' } },
+        {
+          onSuccess: () => {
+            this.currentIndex.update(i => i + 1);
+            this.activeScreenshot.set(0);
+            this.cardClass.set('');
+          },
+        }
+      );
     }, 200);
   }
 
@@ -294,7 +278,8 @@ export class DiscoverContainer implements OnInit {
     this.shuffledGames = [];
     this.currentIndex.set(0);
     this.activeScreenshot.set(0);
-    this.allGames.set([...this.allGames()]);
+    // Refetch games to reset the shuffle
+    this.gamesQuery.refetch();
   }
 
   formatPlaytime(mins: number): string {
