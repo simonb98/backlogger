@@ -194,8 +194,8 @@ export class LibraryContainer implements OnInit {
 
   readonly statusLabels = GAME_STATUS_LABELS;
   readonly statusColors = GAME_STATUS_COLORS;
-  readonly statuses: GameStatus[] = ['playing', 'backlog', 'completed', 'on_hold', 'dropped', 'wishlist'];
-  readonly statusPriority: GameStatus[] = ['playing', 'backlog', 'on_hold', 'wishlist', 'completed', 'dropped'];
+  readonly statuses: GameStatus[] = ['playing', 'up_next', 'backlog', 'completed', 'on_hold', 'dropped', 'wishlist'];
+  readonly statusPriority: GameStatus[] = ['playing', 'up_next', 'backlog', 'on_hold', 'wishlist', 'completed', 'dropped'];
 
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
 

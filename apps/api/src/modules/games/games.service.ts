@@ -161,6 +161,9 @@ export class GamesService {
       ...dto,
       dateStarted: dto.dateStarted ? new Date(dto.dateStarted) : userGame.dateStarted,
       dateCompleted: dto.dateCompleted ? new Date(dto.dateCompleted) : userGame.dateCompleted,
+      skippedUntil: dto.skippedUntil !== undefined
+        ? (dto.skippedUntil ? new Date(dto.skippedUntil) : null)
+        : userGame.skippedUntil,
     });
 
     await this.userGameRepository.save(userGame);

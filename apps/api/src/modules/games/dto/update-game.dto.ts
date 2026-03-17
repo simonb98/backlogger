@@ -2,7 +2,7 @@ import { IsInt, IsOptional, IsString, IsIn, Min, Max, IsDateString } from 'class
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import type { GameStatus } from '../../../database/entities';
 
-const GAME_STATUSES: GameStatus[] = ['backlog', 'playing', 'completed', 'dropped', 'wishlist', 'on_hold'];
+const GAME_STATUSES: GameStatus[] = ['backlog', 'up_next', 'playing', 'completed', 'dropped', 'wishlist', 'on_hold'];
 
 export class UpdateGameDto {
   @ApiPropertyOptional({ description: 'Game status', enum: GAME_STATUSES })
@@ -49,5 +49,10 @@ export class UpdateGameDto {
   @IsOptional()
   @IsInt()
   platformId?: number;
+
+  @ApiPropertyOptional({ description: 'Skipped until date (for Discover feature)' })
+  @IsOptional()
+  @IsDateString()
+  skippedUntil?: string | null;
 }
 

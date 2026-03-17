@@ -131,7 +131,7 @@ export class SteamImportService {
     const userGame = this.userGameRepository.create({
       gameId: game.id,
       platformId: platform.id,
-      status: steamGame.playtime_forever > 0 ? 'playing' : 'backlog',
+      status: 'backlog',
       totalPlaytimeMins: steamGame.playtime_forever,
     });
     await this.userGameRepository.save(userGame);

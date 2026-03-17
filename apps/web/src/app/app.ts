@@ -14,6 +14,10 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
              class="px-4 py-2 rounded-lg font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors no-underline">
             Library
           </a>
+          <a routerLink="/discover" routerLinkActive="bg-blue-50 text-blue-600"
+             class="px-4 py-2 rounded-lg font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors no-underline">
+            🎲 Play
+          </a>
           <a routerLink="/search" routerLinkActive="bg-blue-50 text-blue-600"
              class="px-4 py-2 rounded-lg font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors no-underline">
             Search

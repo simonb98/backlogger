@@ -190,7 +190,7 @@ export class GameDetailContainer implements OnInit {
   showDeleteConfirm = signal(false);
   activeScreenshot = signal(0);
 
-  readonly statuses: GameStatus[] = ['backlog', 'playing', 'completed', 'on_hold', 'dropped', 'wishlist'];
+  readonly statuses: GameStatus[] = ['backlog', 'up_next', 'playing', 'completed', 'on_hold', 'dropped', 'wishlist'];
   readonly statusLabels = GAME_STATUS_LABELS;
   readonly statusColors = GAME_STATUS_COLORS;
 

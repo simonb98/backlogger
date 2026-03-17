@@ -49,5 +49,6 @@ export interface UpdateGameDto {
   dateStarted?: string;
   dateCompleted?: string;
   platformId?: number;
+  skippedUntil?: string | null;
 }
 

@@ -1,4 +1,4 @@
-export type GameStatus = 'backlog' | 'playing' | 'completed' | 'dropped' | 'wishlist' | 'on_hold';
+export type GameStatus = 'backlog' | 'up_next' | 'playing' | 'completed' | 'dropped' | 'wishlist' | 'on_hold';
 
 export interface Game {
   id: number;
@@ -47,6 +47,7 @@ export interface UserGame {
   dateAdded: string;
   dateStarted?: string;
   dateCompleted?: string;
+  skippedUntil?: string;
   game?: Game;
   platform?: Platform;
   tags?: CustomTag[];
@@ -72,6 +73,7 @@ export interface IgdbSearchResult {
 
 export const GAME_STATUS_LABELS: Record<GameStatus, string> = {
   backlog: 'Backlog',
+  up_next: 'Up Next',
   playing: 'Playing',
   completed: 'Completed',
   dropped: 'Dropped',
@@ -81,6 +83,7 @@ export const GAME_STATUS_LABELS: Record<GameStatus, string> = {
 
 export const GAME_STATUS_COLORS: Record<GameStatus, string> = {
   backlog: '#6b7280',
+  up_next: '#8b5cf6',
   playing: '#3b82f6',
   completed: '#22c55e',
   dropped: '#ef4444',

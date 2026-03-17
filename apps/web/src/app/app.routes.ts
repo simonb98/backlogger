@@ -26,5 +26,11 @@ export const routes: Routes = [
       import('./features/import/import.container').then((m) => m.ImportContainer),
     title: 'Import from Steam - Backlogger',
   },
+  {
+    path: 'discover',
+    loadComponent: () =>
+      import('./features/discover/discover.container').then((m) => m.DiscoverContainer),
+    title: 'What to Play? - Backlogger',
+  },
   { path: '**', redirectTo: 'library' },
 ];
