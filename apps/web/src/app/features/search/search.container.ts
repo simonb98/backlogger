@@ -13,8 +13,8 @@ import { injectPlatforms } from '../../libs/client-platforms-api';
   template: `
     <div class="max-w-7xl mx-auto p-6">
       <header class="text-center mb-8">
-        <h1 class="text-3xl font-bold mb-2">Search Games</h1>
-        <p class="text-gray-500">Find games to add to your library</p>
+        <h1 class="text-3xl font-bold mb-2 dark:text-white">Search Games</h1>
+        <p class="text-gray-500 dark:text-gray-400">Find games to add to your library</p>
       </header>
 
       <div class="flex items-center gap-4 mb-8">
@@ -23,16 +23,16 @@ import { injectPlatforms } from '../../libs/client-platforms-api';
           placeholder="Search for a game..."
           [value]="searchQuery()"
           (input)="onSearchInput($event)"
-          class="flex-1 px-6 py-4 text-lg border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
+          class="flex-1 px-6 py-4 text-lg border-2 border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
           autofocus
         />
         @if (loading()) {
-          <span class="text-gray-500 text-sm">Searching...</span>
+          <span class="text-gray-500 dark:text-gray-400 text-sm">Searching...</span>
         }
       </div>
 
       @if (error()) {
-        <div class="p-4 bg-red-50 text-red-600 rounded-lg mb-4">{{ error() }}</div>
+        <div class="p-4 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg mb-4">{{ error() }}</div>
       }
 
       <!-- Search Results -->
@@ -42,15 +42,15 @@ import { injectPlatforms } from '../../libs/client-platforms-api';
 
       <!-- No search results message -->
       @if (searchQuery().length >= 2 && !loading() && results().length === 0) {
-        <div class="text-center py-12 text-gray-500">No games found for "{{ searchQuery() }}"</div>
+        <div class="text-center py-12 text-gray-500 dark:text-gray-400">No games found for "{{ searchQuery() }}"</div>
       }
 
       <!-- Popular Games (shown when no search) -->
       @if (searchQuery().length < 2 && !loading()) {
         <div class="mt-8">
-          <h2 class="text-xl font-semibold mb-4 text-gray-700">🔥 Popular Right Now</h2>
+          <h2 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-200">🔥 Popular Right Now</h2>
           @if (loadingPopular()) {
-            <div class="text-gray-500">Loading popular games...</div>
+            <div class="text-gray-500 dark:text-gray-400">Loading popular games...</div>
           } @else {
             <ng-container
               *ngTemplateOutlet="gameGrid; context: { games: popularGames() }"
@@ -64,9 +64,9 @@ import { injectPlatforms } from '../../libs/client-platforms-api';
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
           @for (game of games; track game.id) {
             <div
-              class="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col h-full"
+              class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col h-full"
             >
-              <div class="aspect-[3/4] bg-gray-100">
+              <div class="aspect-[3/4] bg-gray-100 dark:bg-gray-700">
                 @if (game.coverUrl) {
                   <img [src]="game.coverUrl" [alt]="game.name" class="w-full h-full object-cover" />
                 } @else {
@@ -76,15 +76,15 @@ import { injectPlatforms } from '../../libs/client-platforms-api';
                 }
               </div>
               <div class="p-4 flex-1">
-                <h3 class="font-semibold line-clamp-2 mb-1">{{ game.name }}</h3>
+                <h3 class="font-semibold line-clamp-2 mb-1 dark:text-white">{{ game.name }}</h3>
                 @if (game.releaseYear) {
-                  <span class="text-sm text-gray-500">{{ game.releaseYear }}</span>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">{{ game.releaseYear }}</span>
                 }
                 @if (game.platforms?.length) {
                   <div class="text-xs text-gray-400 mt-1">{{ getPlatformNames(game) }}</div>
                 }
                 @if (game.rating) {
-                  <div class="text-sm mt-2">⭐ {{ game.rating | number: '1.0-0' }}</div>
+                  <div class="text-sm mt-2 dark:text-gray-300">⭐ {{ game.rating | number: '1.0-0' }}</div>
                 }
               </div>
               @if (addedGameIds.has(game.id)) {
@@ -120,22 +120,22 @@ import { injectPlatforms } from '../../libs/client-platforms-api';
         (click)="closeAddDialog()"
       >
         <div
-          class="bg-white p-8 rounded-xl w-full max-w-md mx-4"
+          class="bg-white dark:bg-gray-800 p-8 rounded-xl w-full max-w-md mx-4"
           (click)="$event.stopPropagation()"
         >
-          <h2 class="text-xl font-bold mb-4">
+          <h2 class="text-xl font-bold mb-4 dark:text-white">
             {{ addStatus() === 'wishlist' ? 'Add to Wishlist' : 'Add to Library' }}
           </h2>
-          <p class="mb-4">
-            Adding: <strong>{{ selectedGame()!.name }}</strong>
+          <p class="mb-4 dark:text-gray-300">
+            Adding: <strong class="dark:text-white">{{ selectedGame()!.name }}</strong>
           </p>
 
-          <label for="platform-select" class="block font-medium mb-2">Select Platform:</label>
+          <label for="platform-select" class="block font-medium mb-2 dark:text-gray-300">Select Platform:</label>
           <select
             id="platform-select"
             [value]="selectedPlatformId() ?? ''"
             (change)="selectedPlatformId.set(+$any($event.target).value)"
-            class="w-full p-3 border-2 border-gray-200 rounded-lg mb-6"
+            class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg mb-6 bg-white dark:bg-gray-700 dark:text-white"
           >
             <option value="" disabled>Choose a platform...</option>
             @for (platform of availablePlatforms(); track platform.id) {
@@ -145,7 +145,7 @@ import { injectPlatforms } from '../../libs/client-platforms-api';
 
           <div class="flex gap-4">
             <button
-              class="flex-1 py-3 bg-gray-100 rounded-lg font-medium hover:bg-gray-200"
+              class="flex-1 py-3 bg-gray-100 dark:bg-gray-700 dark:text-white rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
               (click)="closeAddDialog()"
             >
               Cancel

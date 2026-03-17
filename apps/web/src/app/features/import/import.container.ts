@@ -14,22 +14,22 @@ import {
   imports: [CommonModule, FormsModule],
   template: `
     <div class="max-w-2xl mx-auto p-6">
-      <h1 class="text-3xl font-bold mb-2">Import from Steam</h1>
-      <p class="text-gray-500 mb-8">Import your Steam library to quickly add games</p>
+      <h1 class="text-3xl font-bold mb-2 dark:text-white">Import from Steam</h1>
+      <p class="text-gray-500 dark:text-gray-400 mb-8">Import your Steam library to quickly add games</p>
 
       <!-- Step 1: Enter Steam ID -->
       @if (!profile() && !importResult() && !importing()) {
-        <div class="bg-white p-6 rounded-xl shadow-sm">
-          <label class="block font-medium mb-2">Steam Profile URL or ID</label>
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
+          <label class="block font-medium mb-2 dark:text-gray-300">Steam Profile URL or ID</label>
           <input
             type="text"
             [(ngModel)]="steamInput"
             placeholder="https://steamcommunity.com/id/yourname"
-            class="w-full p-4 border-2 border-gray-200 rounded-lg mb-4 focus:outline-none focus:border-blue-500"
+            class="w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-lg mb-4 bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:border-blue-500"
           />
-          <p class="text-sm text-gray-500 mb-4">
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
             Paste your Steam profile URL, Steam ID, or vanity name.<br />
-            Make sure your Steam profile and game library are set to <strong>public</strong>.
+            Make sure your Steam profile and game library are set to <strong class="dark:text-white">public</strong>.
           </p>
           <button
             (click)="lookupProfile()"
@@ -39,19 +39,19 @@ import {
             {{ loading() ? 'Looking up...' : 'Find Profile' }}
           </button>
           @if (error()) {
-            <p class="mt-4 text-red-600 text-center">{{ error() }}</p>
+            <p class="mt-4 text-red-600 dark:text-red-400 text-center">{{ error() }}</p>
           }
         </div>
       }
 
       <!-- Step 2: Confirm Profile -->
       @if (profile() && !importResult() && !importing()) {
-        <div class="bg-white p-6 rounded-xl shadow-sm">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
           <div class="flex items-center gap-4 mb-6">
             <img [src]="profile()!.profile.avatar" class="w-16 h-16 rounded-full" />
             <div>
-              <h2 class="text-xl font-semibold">{{ profile()!.profile.name }}</h2>
-              <p class="text-gray-500">
+              <h2 class="text-xl font-semibold dark:text-white">{{ profile()!.profile.name }}</h2>
+              <p class="text-gray-500 dark:text-gray-400">
                 {{ profile()!.gameCount }} games · {{ profile()!.totalPlaytimeHours }}h played
               </p>
             </div>
@@ -59,7 +59,7 @@ import {
           <div class="flex gap-4">
             <button
               (click)="reset()"
-              class="flex-1 py-3 bg-gray-100 rounded-lg font-medium hover:bg-gray-200"
+              class="flex-1 py-3 bg-gray-100 dark:bg-gray-700 dark:text-white rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
             >
               Back
             </button>
@@ -75,16 +75,16 @@ import {
 
       <!-- Step 2.5: Import Progress -->
       @if (importing()) {
-        <div class="bg-white p-6 rounded-xl shadow-sm">
-          <h2 class="text-xl font-semibold mb-4">Importing Games...</h2>
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
+          <h2 class="text-xl font-semibold mb-4 dark:text-white">Importing Games...</h2>
 
           <!-- Progress bar -->
           <div class="mb-4">
-            <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
               <span>{{ progress()?.current || 0 }} of {{ progress()?.total || 0 }}</span>
               <span>{{ progressPercent() }}%</span>
             </div>
-            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+            <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <div
                 class="h-full bg-blue-500 transition-all duration-300"
                 [style.width.%]="progressPercent()"
@@ -94,7 +94,7 @@ import {
 
           <!-- Current game -->
           @if (progress()?.gameName) {
-            <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
               @if (progress()?.status === 'processing') {
                 <div
                   class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"
@@ -106,23 +106,23 @@ import {
               } @else {
                 <span class="text-red-500">✗</span>
               }
-              <span class="truncate">{{ progress()?.gameName }}</span>
+              <span class="truncate dark:text-white">{{ progress()?.gameName }}</span>
             </div>
           }
 
           <!-- Stats so far -->
           <div class="grid grid-cols-3 gap-4 mt-4 text-center text-sm">
             <div>
-              <div class="font-semibold text-green-600">{{ importedCount() }}</div>
-              <div class="text-gray-500">Imported</div>
+              <div class="font-semibold text-green-600 dark:text-green-400">{{ importedCount() }}</div>
+              <div class="text-gray-500 dark:text-gray-400">Imported</div>
             </div>
             <div>
-              <div class="font-semibold text-yellow-600">{{ skippedCount() }}</div>
-              <div class="text-gray-500">Skipped</div>
+              <div class="font-semibold text-yellow-600 dark:text-yellow-400">{{ skippedCount() }}</div>
+              <div class="text-gray-500 dark:text-gray-400">Skipped</div>
             </div>
             <div>
-              <div class="font-semibold text-red-600">{{ failedCount() }}</div>
-              <div class="text-gray-500">Failed</div>
+              <div class="font-semibold text-red-600 dark:text-red-400">{{ failedCount() }}</div>
+              <div class="text-gray-500 dark:text-gray-400">Failed</div>
             </div>
           </div>
         </div>
@@ -130,35 +130,35 @@ import {
 
       <!-- Step 3: Import Results -->
       @if (importResult()) {
-        <div class="bg-white p-6 rounded-xl shadow-sm">
-          <h2 class="text-xl font-semibold mb-4">Import Complete!</h2>
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
+          <h2 class="text-xl font-semibold mb-4 dark:text-white">Import Complete!</h2>
           <div class="grid grid-cols-3 gap-4 mb-6">
-            <div class="text-center p-4 bg-green-50 rounded-lg">
-              <div class="text-2xl font-bold text-green-600">{{ importResult()!.imported }}</div>
-              <div class="text-sm text-gray-600">Imported</div>
+            <div class="text-center p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
+              <div class="text-2xl font-bold text-green-600 dark:text-green-400">{{ importResult()!.imported }}</div>
+              <div class="text-sm text-gray-600 dark:text-gray-400">Imported</div>
             </div>
-            <div class="text-center p-4 bg-yellow-50 rounded-lg">
-              <div class="text-2xl font-bold text-yellow-600">{{ importResult()!.skipped }}</div>
-              <div class="text-sm text-gray-600">Skipped</div>
+            <div class="text-center p-4 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg">
+              <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ importResult()!.skipped }}</div>
+              <div class="text-sm text-gray-600 dark:text-gray-400">Skipped</div>
             </div>
-            <div class="text-center p-4 bg-red-50 rounded-lg">
-              <div class="text-2xl font-bold text-red-600">{{ importResult()!.failed }}</div>
-              <div class="text-sm text-gray-600">Failed</div>
+            <div class="text-center p-4 bg-red-50 dark:bg-red-900/30 rounded-lg">
+              <div class="text-2xl font-bold text-red-600 dark:text-red-400">{{ importResult()!.failed }}</div>
+              <div class="text-sm text-gray-600 dark:text-gray-400">Failed</div>
             </div>
           </div>
 
-          <div class="max-h-64 overflow-y-auto mb-6 border rounded-lg">
+          <div class="max-h-64 overflow-y-auto mb-6 border dark:border-gray-700 rounded-lg">
             @for (game of importResult()!.games; track game.name) {
-              <div class="flex justify-between items-center px-4 py-2 border-b last:border-b-0">
-                <span class="truncate">{{ game.name }}</span>
+              <div class="flex justify-between items-center px-4 py-2 border-b dark:border-gray-700 last:border-b-0">
+                <span class="truncate dark:text-white">{{ game.name }}</span>
                 <span
                   class="text-sm px-2 py-1 rounded"
                   [class]="
                     game.status === 'imported'
-                      ? 'bg-green-100 text-green-700'
+                      ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400'
                       : game.status === 'skipped'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-red-100 text-red-700'
+                        ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-400'
+                        : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400'
                   "
                 >
                   {{ game.status }}
