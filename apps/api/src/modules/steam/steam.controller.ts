@@ -1,6 +1,6 @@
 import { Controller, Post, Get, Body, Query, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { SteamService } from './steam.service';
 import { SteamImportService, ImportResult } from './steam-import.service';
 import { SteamImportDto } from './dto/steam-import.dto';

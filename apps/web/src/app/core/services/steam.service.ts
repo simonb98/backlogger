@@ -59,22 +59,38 @@ export class SteamService {
     );
 
     eventSource.addEventListener('progress', (event) => {
-      const data = JSON.parse((event as MessageEvent).data) as ImportProgress;
-      subject.next(data);
+      try {
+        const data = JSON.parse((event as MessageEvent).data) as ImportProgress;
+        subject.next(data);
 
-      if (data.done) {
-        eventSource.close();
-        subject.complete();
+        if (data.done) {
+          eventSource.close();
+          subject.complete();
+        }
+      } catch (e) {
+        console.error('Failed to parse progress event', e);
       }
     });
 
     eventSource.addEventListener('error', (event) => {
-      const data = JSON.parse((event as MessageEvent).data);
-      subject.error(new Error(data.message || 'Import failed'));
+      try {
+        const messageEvent = event as MessageEvent;
+        if (messageEvent.data) {
+          const data = JSON.parse(messageEvent.data);
+          subject.error(new Error(data.message || 'Import failed'));
+        } else {
+          subject.error(new Error('Import failed'));
+        }
+      } catch {
+        subject.error(new Error('Import failed'));
+      }
       eventSource.close();
     });
 
     eventSource.onerror = () => {
+      if (eventSource.readyState === EventSource.CLOSED) {
+        return; // Already handled
+      }
       subject.error(new Error('Connection lost'));
       eventSource.close();
     };
