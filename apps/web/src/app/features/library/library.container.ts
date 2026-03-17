@@ -40,32 +40,32 @@ interface GroupedGame {
   template: `
     <div class="max-w-7xl mx-auto p-6">
       <header class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold">My Library</h1>
+        <h1 class="text-3xl font-bold dark:text-white">My Library</h1>
         <div class="flex gap-2">
           @if (!selectMode()) {
             <button
               (click)="selectMode.set(true)"
-              class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               Select
             </button>
           } @else {
             <button
               (click)="selectAll()"
-              class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               Select All
             </button>
             <button
               (click)="exitSelectMode()"
-              class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               Cancel
             </button>
           }
           <a
             routerLink="/import"
-            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors no-underline"
+            class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors no-underline"
           >
             Import
           </a>
@@ -79,7 +79,7 @@ interface GroupedGame {
       </header>
 
       <!-- Filters Bar -->
-      <div class="bg-white p-4 rounded-xl shadow-sm mb-6 space-y-4">
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm mb-6 space-y-4">
         <!-- Search -->
         <div class="flex gap-4">
           <input
@@ -87,13 +87,13 @@ interface GroupedGame {
             placeholder="Search games..."
             [ngModel]="searchQuery()"
             (ngModelChange)="searchQuery.set($event); debouncedSearch()"
-            class="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+            class="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:border-blue-500"
           />
           <!-- Sort -->
           <select
             [ngModel]="sortBy()"
             (ngModelChange)="sortBy.set($event); resetDisplayCount()"
-            class="px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-blue-500"
+            class="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:border-blue-500"
           >
             <option value="date_added">Date Added</option>
             <option value="name">Name</option>
@@ -103,7 +103,7 @@ interface GroupedGame {
           </select>
           <button
             (click)="toggleSortOrder()"
-            class="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+            class="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white"
             [title]="sortOrder() === 'asc' ? 'Ascending' : 'Descending'"
           >
             {{ sortOrder() === 'asc' ? '↑' : '↓' }}
@@ -112,11 +112,11 @@ interface GroupedGame {
 
         <!-- Status + Platform Filters -->
         <div class="flex flex-wrap gap-2 items-center">
-          <span class="text-sm text-gray-500 mr-2">Status:</span>
+          <span class="text-sm text-gray-500 dark:text-gray-400 mr-2">Status:</span>
           <button
             class="px-3 py-1.5 rounded-full text-sm font-medium transition-all"
             [class]="
-              selectedStatus() === null ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
+              selectedStatus() === null ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
             "
             (click)="setStatus(null)"
           >
@@ -125,7 +125,7 @@ interface GroupedGame {
           @for (status of statuses; track status) {
             <button
               class="px-3 py-1.5 rounded-full text-sm font-medium transition-all"
-              [class]="selectedStatus() === status ? 'text-white' : 'bg-gray-100 hover:bg-gray-200'"
+              [class]="selectedStatus() === status ? 'text-white' : 'bg-gray-100 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'"
               [style.backgroundColor]="selectedStatus() === status ? getStatusColor(status) : ''"
               (click)="setStatus(status)"
             >
@@ -133,13 +133,13 @@ interface GroupedGame {
             </button>
           }
 
-          <span class="text-gray-300 mx-2">|</span>
+          <span class="text-gray-300 dark:text-gray-600 mx-2">|</span>
 
-          <span class="text-sm text-gray-500 mr-2">Platform:</span>
+          <span class="text-sm text-gray-500 dark:text-gray-400 mr-2">Platform:</span>
           <select
             [ngModel]="selectedPlatform()"
             (ngModelChange)="selectedPlatform.set($event); resetDisplayCount()"
-            class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none"
+            class="px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm focus:outline-none"
           >
             <option [ngValue]="null">All Platforms</option>
             @for (platform of platforms(); track platform.id) {
@@ -186,21 +186,21 @@ interface GroupedGame {
 
       <!-- Results count -->
       @if (!loading() && totalGames() > 0) {
-        <p class="text-sm text-gray-500 mb-4">{{ totalGames() }} games</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ totalGames() }} games</p>
       }
 
       @if (loading()) {
-        <div class="text-center py-12 text-gray-500">Loading your games...</div>
+        <div class="text-center py-12 text-gray-500 dark:text-gray-400">Loading your games...</div>
       }
 
       @if (error()) {
-        <div class="text-center py-8 px-4 bg-red-50 text-red-600 rounded-lg">{{ error() }}</div>
+        <div class="text-center py-8 px-4 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg">{{ error() }}</div>
       }
 
       @if (!loading() && groupedGames().length === 0 && !hasActiveFilters()) {
-        <div class="text-center py-16 bg-gray-100 rounded-xl">
-          <h2 class="text-xl font-semibold mb-2">No games yet!</h2>
-          <p class="text-gray-500 mb-6">Search for games or import from Steam.</p>
+        <div class="text-center py-16 bg-gray-100 dark:bg-gray-800 rounded-xl">
+          <h2 class="text-xl font-semibold mb-2 dark:text-white">No games yet!</h2>
+          <p class="text-gray-500 dark:text-gray-400 mb-6">Search for games or import from Steam.</p>
           <a
             routerLink="/search"
             class="inline-block px-8 py-3 bg-blue-500 text-white rounded-lg font-medium no-underline hover:bg-blue-600"
@@ -211,7 +211,7 @@ interface GroupedGame {
       }
 
       @if (!loading() && groupedGames().length === 0 && hasActiveFilters()) {
-        <div class="text-center py-12 text-gray-500">
+        <div class="text-center py-12 text-gray-500 dark:text-gray-400">
           No games match your filters.
           <button (click)="clearFilters()" class="text-blue-500 hover:underline ml-1">
             Clear filters
@@ -225,7 +225,7 @@ interface GroupedGame {
       >
         @for (grouped of groupedGames(); track grouped.game.id; let idx = $index) {
           <div
-            class="relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
+            class="relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
             [class.ring-2]="isSelected(grouped.entries[0].id)"
             [class.ring-blue-500]="isSelected(grouped.entries[0].id)"
             [class.cursor-pointer]="selectMode()"
@@ -238,7 +238,7 @@ interface GroupedGame {
                   [class]="
                     isSelected(grouped.entries[0].id)
                       ? 'bg-blue-500 border-blue-500 text-white'
-                      : 'bg-white border-gray-300'
+                      : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-500'
                   "
                 >
                   @if (isSelected(grouped.entries[0].id)) {
@@ -253,7 +253,7 @@ interface GroupedGame {
               [class.pointer-events-none]="selectMode()"
               class="block no-underline text-inherit"
             >
-              <div class="relative aspect-[3/4] bg-gray-100">
+              <div class="relative aspect-[3/4] bg-gray-100 dark:bg-gray-700">
                 @if (grouped.game.coverUrl) {
                   <img
                     [src]="grouped.game.coverUrl"
@@ -277,17 +277,17 @@ interface GroupedGame {
                 }
               </div>
               <div class="p-3">
-                <h3 class="font-semibold text-sm line-clamp-2 mb-1">{{ grouped.game.name }}</h3>
+                <h3 class="font-semibold text-sm line-clamp-2 mb-1 dark:text-white">{{ grouped.game.name }}</h3>
                 <div class="flex flex-wrap gap-1 mb-1">
                   @for (platform of grouped.platforms; track platform.id) {
                     <span
-                      class="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-medium text-gray-600"
+                      class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px] font-medium text-gray-600 dark:text-gray-300"
                     >
                       {{ platform.abbreviation }}
                     </span>
                   }
                 </div>
-                <div class="flex gap-2 text-xs text-gray-500">
+                <div class="flex gap-2 text-xs text-gray-500 dark:text-gray-400">
                   @if (grouped.highestRating) {
                     <span>⭐ {{ grouped.highestRating }}</span>
                   }
@@ -303,7 +303,7 @@ interface GroupedGame {
 
       <!-- Infinite scroll indicator -->
       @if (hasMoreGames() && !loading()) {
-        <div class="py-8 text-center text-gray-400">
+        <div class="py-8 text-center text-gray-400 dark:text-gray-500">
           Scroll for more...
         </div>
       }

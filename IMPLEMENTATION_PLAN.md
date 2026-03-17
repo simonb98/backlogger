@@ -33,11 +33,8 @@
 - PWA/offline mode
 - Social features (friends, sharing)
 - Achievements tracking
-- "Up Next" feature (planning what to play next with tinder-like swiping)
-
-**TODO: **
-- move pagination to bottom
-- 5 games per row
+- Physical and digital game distinction
+- Lending out games to friends feature
 
 ---
 
