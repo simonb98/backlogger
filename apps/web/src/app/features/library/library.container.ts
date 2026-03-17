@@ -129,7 +129,7 @@ interface GroupedGame {
       @if (selectedIds().size > 0) {
         <div class="bg-blue-600 text-white py-3 px-6 rounded-xl shadow-sm mb-4 flex items-center justify-between">
           <div class="flex items-center gap-4">
-            <button (click)="clearSelection()" class="hover:bg-blue-700 p-1 rounded">✕</button>
+            <button (click)="clearSelection()" class="w-8 h-8 flex items-center justify-center bg-blue-700 hover:bg-blue-800 rounded">✕</button>
             <span class="font-medium">{{ selectedIds().size }} game(s) selected</span>
           </div>
           <div class="flex items-center gap-2">
