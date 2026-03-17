@@ -174,5 +174,26 @@ export class GamesService {
     const userGame = await this.findOne(id);
     await this.userGameRepository.remove(userGame);
   }
+
+  async bulkUpdate(ids: number[], dto: UpdateGameDto): Promise<{ updated: number }> {
+    const updateData: Record<string, any> = {};
+
+    if (dto.status !== undefined) updateData.status = dto.status;
+    if (dto.rating !== undefined) updateData.rating = dto.rating;
+    if (dto.completionPercent !== undefined) updateData.completionPercent = dto.completionPercent;
+    if (dto.notes !== undefined) updateData.notes = dto.notes;
+    if (dto.skippedUntil !== undefined) {
+      updateData.skippedUntil = dto.skippedUntil ? new Date(dto.skippedUntil) : null;
+    }
+
+    const result = await this.userGameRepository
+      .createQueryBuilder()
+      .update()
+      .set(updateData)
+      .whereInIds(ids)
+      .execute();
+
+    return { updated: result.affected || 0 };
+  }
 }
 

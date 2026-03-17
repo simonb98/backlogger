@@ -24,9 +24,42 @@ interface GroupedGame {
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="max-w-7xl mx-auto p-6">
+      <!-- Bulk Edit Bar -->
+      @if (selectedIds().size > 0) {
+        <div class="fixed top-0 left-0 right-0 bg-blue-600 text-white py-3 px-6 shadow-lg z-50 flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <button (click)="clearSelection()" class="hover:bg-blue-700 p-1 rounded">✕</button>
+            <span class="font-medium">{{ selectedIds().size }} game(s) selected</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-blue-200 mr-2">Set status:</span>
+            @for (status of statuses; track status) {
+              <button
+                (click)="bulkSetStatus(status)"
+                class="px-3 py-1.5 rounded text-sm font-medium transition-colors hover:opacity-90"
+                [style.backgroundColor]="statusColors[status]">
+                {{ statusLabels[status] }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
       <header class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold">My Library</h1>
         <div class="flex gap-2">
+          @if (!selectMode()) {
+            <button (click)="selectMode.set(true)" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+              Select
+            </button>
+          } @else {
+            <button (click)="selectAll()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+              Select All
+            </button>
+            <button (click)="exitSelectMode()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+              Cancel
+            </button>
+          }
           <a routerLink="/import" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors no-underline">
             Import
           </a>
@@ -171,42 +204,60 @@ interface GroupedGame {
 
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
         @for (grouped of groupedGames(); track grouped.game.id) {
-          <a [routerLink]="['/games', grouped.entries[0].id]"
-             class="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all no-underline text-inherit">
-            <div class="relative aspect-[3/4] bg-gray-100">
-              @if (grouped.game.coverUrl) {
-                <img [src]="grouped.game.coverUrl" [alt]="grouped.game.name" class="w-full h-full object-cover" />
-              } @else {
-                <div class="flex items-center justify-center h-full text-gray-400 text-sm">No Image</div>
-              }
-              @if (grouped.isFullyCompleted) {
-                <span class="absolute top-2 right-2 text-2xl" title="100% Completed">🏆</span>
-              } @else {
-                <span class="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-semibold text-white uppercase"
-                      [style.backgroundColor]="getStatusColor(grouped.primaryStatus)">
-                  {{ statusLabels[grouped.primaryStatus] }}
-                </span>
-              }
-            </div>
-            <div class="p-3">
-              <h3 class="font-semibold text-sm line-clamp-2 mb-1">{{ grouped.game.name }}</h3>
-              <div class="flex flex-wrap gap-1 mb-1">
-                @for (platform of grouped.platforms; track platform.id) {
-                  <span class="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-medium text-gray-600">
-                    {{ platform.abbreviation }}
+          <div class="relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
+               [class.ring-2]="isSelected(grouped.entries[0].id)"
+               [class.ring-blue-500]="isSelected(grouped.entries[0].id)"
+               (click)="selectMode() ? toggleSelect(grouped.entries[0].id) : null">
+
+            @if (selectMode()) {
+              <div class="absolute top-2 left-2 z-10">
+                <div class="w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer"
+                     [class]="isSelected(grouped.entries[0].id) ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300'">
+                  @if (isSelected(grouped.entries[0].id)) {
+                    <span class="text-sm">✓</span>
+                  }
+                </div>
+              </div>
+            }
+
+            <a [routerLink]="selectMode() ? null : ['/games', grouped.entries[0].id]"
+               [class.pointer-events-none]="selectMode()"
+               class="block no-underline text-inherit">
+              <div class="relative aspect-[3/4] bg-gray-100">
+                @if (grouped.game.coverUrl) {
+                  <img [src]="grouped.game.coverUrl" [alt]="grouped.game.name" class="w-full h-full object-cover" />
+                } @else {
+                  <div class="flex items-center justify-center h-full text-gray-400 text-sm">No Image</div>
+                }
+                @if (grouped.isFullyCompleted) {
+                  <span class="absolute top-2 right-2 text-2xl" title="100% Completed">🏆</span>
+                } @else {
+                  <span class="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-semibold text-white uppercase"
+                        [style.backgroundColor]="getStatusColor(grouped.primaryStatus)">
+                    {{ statusLabels[grouped.primaryStatus] }}
                   </span>
                 }
               </div>
-              <div class="flex gap-2 text-xs text-gray-500">
-                @if (grouped.highestRating) {
-                  <span>⭐ {{ grouped.highestRating }}</span>
-                }
-                @if (grouped.totalPlaytimeMins > 0) {
-                  <span>🕐 {{ formatPlaytime(grouped.totalPlaytimeMins) }}</span>
-                }
+              <div class="p-3">
+                <h3 class="font-semibold text-sm line-clamp-2 mb-1">{{ grouped.game.name }}</h3>
+                <div class="flex flex-wrap gap-1 mb-1">
+                  @for (platform of grouped.platforms; track platform.id) {
+                    <span class="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-medium text-gray-600">
+                      {{ platform.abbreviation }}
+                    </span>
+                  }
+                </div>
+                <div class="flex gap-2 text-xs text-gray-500">
+                  @if (grouped.highestRating) {
+                    <span>⭐ {{ grouped.highestRating }}</span>
+                  }
+                  @if (grouped.totalPlaytimeMins > 0) {
+                    <span>🕐 {{ formatPlaytime(grouped.totalPlaytimeMins) }}</span>
+                  }
+                </div>
               </div>
-            </div>
-          </a>
+            </a>
+          </div>
         }
       </div>
     </div>
@@ -235,6 +286,10 @@ export class LibraryContainer implements OnInit {
     if (this.perPage() === 0) return 1;
     return Math.ceil(this.totalGames() / this.perPage());
   });
+
+  // Selection
+  selectMode = signal(false);
+  selectedIds = signal<Set<number>>(new Set());
 
   platforms = this.platformsService.platforms;
 
@@ -419,6 +474,51 @@ export class LibraryContainer implements OnInit {
 
   getStatusColor(status: GameStatus): string {
     return this.statusColors[status];
+  }
+
+  // Selection methods
+  isSelected(id: number): boolean {
+    return this.selectedIds().has(id);
+  }
+
+  toggleSelect(id: number) {
+    const current = new Set(this.selectedIds());
+    if (current.has(id)) {
+      current.delete(id);
+    } else {
+      current.add(id);
+    }
+    this.selectedIds.set(current);
+  }
+
+  selectAll() {
+    const allIds = this.groupedGames().map(g => g.entries[0].id);
+    this.selectedIds.set(new Set(allIds));
+  }
+
+  clearSelection() {
+    this.selectedIds.set(new Set());
+  }
+
+  exitSelectMode() {
+    this.selectMode.set(false);
+    this.clearSelection();
+  }
+
+  bulkSetStatus(status: GameStatus) {
+    const ids = Array.from(this.selectedIds());
+    if (ids.length === 0) return;
+
+    this.gamesService.bulkUpdateGames(ids, { status }).subscribe({
+      next: () => {
+        this.exitSelectMode();
+        this.loadGames();
+      },
+      error: (err) => {
+        console.error('Bulk update failed:', err);
+        alert('Failed to update games');
+      },
+    });
   }
 }
 

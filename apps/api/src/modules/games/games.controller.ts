@@ -50,6 +50,12 @@ export class GamesController {
     return this.gamesService.update(id, dto);
   }
 
+  @Patch()
+  @ApiOperation({ summary: 'Bulk update games in library' })
+  async bulkUpdate(@Body() dto: { ids: number[]; updates: UpdateGameDto }) {
+    return this.gamesService.bulkUpdate(dto.ids, dto.updates);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Remove a game from library' })

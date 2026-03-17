@@ -30,6 +30,10 @@ export class GamesService {
     return this.api.patch<UserGame>(`/games/${id}`, dto);
   }
 
+  bulkUpdateGames(ids: number[], updates: UpdateGameDto): Observable<{ updated: number }> {
+    return this.api.patch<{ updated: number }>('/games', { ids, updates });
+  }
+
   deleteGame(id: number): Observable<void> {
     return this.api.delete<void>(`/games/${id}`);
   }
