@@ -37,7 +37,7 @@ import { IgdbSearchResult } from '../../core/models';
 
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         @for (game of results(); track game.id) {
-          <div class="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all">
+          <div class="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col h-full">
             <div class="aspect-[3/4] bg-gray-100">
               @if (game.coverUrl) {
                 <img [src]="game.coverUrl" [alt]="game.name" class="w-full h-full object-cover" />
@@ -45,7 +45,7 @@ import { IgdbSearchResult } from '../../core/models';
                 <div class="flex items-center justify-center h-full text-gray-400 text-sm">No Image</div>
               }
             </div>
-            <div class="p-4">
+            <div class="p-4 flex-1">
               <h3 class="font-semibold line-clamp-2 mb-1">{{ game.name }}</h3>
               @if (game.releaseYear) {
                 <span class="text-sm text-gray-500">{{ game.releaseYear }}</span>
@@ -62,7 +62,7 @@ import { IgdbSearchResult } from '../../core/models';
                 ✓ Added
               </div>
             } @else {
-              <div class="flex">
+              <div class="flex mt-auto">
                 <button
                   class="flex-1 py-3 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors"
                   [disabled]="adding()"
