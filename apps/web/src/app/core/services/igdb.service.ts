@@ -32,6 +32,10 @@ export class IgdbService {
     return this.api.get<IgdbSearchResult[]>('/igdb/search', { q: query, limit });
   }
 
+  getPopular(limit: number = 20): Observable<IgdbSearchResult[]> {
+    return this.api.get<IgdbSearchResult[]>('/igdb/popular', { limit });
+  }
+
   getGame(igdbId: number): Observable<IgdbGameDetails> {
     return this.api.get<IgdbGameDetails>(`/igdb/game/${igdbId}`);
   }

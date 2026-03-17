@@ -35,55 +35,76 @@ import { IgdbSearchResult } from '../../core/models';
         <div class="p-4 bg-red-50 text-red-600 rounded-lg mb-4">{{ error() }}</div>
       }
 
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        @for (game of results(); track game.id) {
-          <div class="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col h-full">
-            <div class="aspect-[3/4] bg-gray-100">
-              @if (game.coverUrl) {
-                <img [src]="game.coverUrl" [alt]="game.name" class="w-full h-full object-cover" />
-              } @else {
-                <div class="flex items-center justify-center h-full text-gray-400 text-sm">No Image</div>
-              }
-            </div>
-            <div class="p-4 flex-1">
-              <h3 class="font-semibold line-clamp-2 mb-1">{{ game.name }}</h3>
-              @if (game.releaseYear) {
-                <span class="text-sm text-gray-500">{{ game.releaseYear }}</span>
-              }
-              @if (game.platforms?.length) {
-                <div class="text-xs text-gray-400 mt-1">{{ getPlatformNames(game) }}</div>
-              }
-              @if (game.rating) {
-                <div class="text-sm mt-2">⭐ {{ game.rating | number:'1.0-0' }}</div>
-              }
-            </div>
-            @if (addedGameIds.has(game.id)) {
-              <div class="py-3 bg-green-500 text-white font-medium text-center">
-                ✓ Added
-              </div>
-            } @else {
-              <div class="flex mt-auto">
-                <button
-                  class="flex-1 py-3 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors"
-                  [disabled]="adding()"
-                  (click)="openAddDialog(game, 'backlog')">
-                  + Library
-                </button>
-                <button
-                  class="flex-1 py-3 bg-purple-500 text-white font-medium hover:bg-purple-600 transition-colors border-l border-purple-400"
-                  [disabled]="adding()"
-                  (click)="openAddDialog(game, 'wishlist')">
-                  ♡ Wishlist
-                </button>
-              </div>
-            }
-          </div>
-        }
-      </div>
+      <!-- Search Results -->
+      @if (results().length > 0) {
+        <ng-container *ngTemplateOutlet="gameGrid; context: { games: results() }"></ng-container>
+      }
 
+      <!-- No search results message -->
       @if (searchQuery().length >= 2 && !loading() && results().length === 0) {
         <div class="text-center py-12 text-gray-500">No games found for "{{ searchQuery() }}"</div>
       }
+
+      <!-- Popular Games (shown when no search) -->
+      @if (searchQuery().length < 2 && !loading()) {
+        <div class="mt-8">
+          <h2 class="text-xl font-semibold mb-4 text-gray-700">🔥 Popular Right Now</h2>
+          @if (loadingPopular()) {
+            <div class="text-gray-500">Loading popular games...</div>
+          } @else {
+            <ng-container *ngTemplateOutlet="gameGrid; context: { games: popularGames() }"></ng-container>
+          }
+        </div>
+      }
+
+      <!-- Game Card Template -->
+      <ng-template #gameGrid let-games="games">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+          @for (game of games; track game.id) {
+            <div class="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col h-full">
+              <div class="aspect-[3/4] bg-gray-100">
+                @if (game.coverUrl) {
+                  <img [src]="game.coverUrl" [alt]="game.name" class="w-full h-full object-cover" />
+                } @else {
+                  <div class="flex items-center justify-center h-full text-gray-400 text-sm">No Image</div>
+                }
+              </div>
+              <div class="p-4 flex-1">
+                <h3 class="font-semibold line-clamp-2 mb-1">{{ game.name }}</h3>
+                @if (game.releaseYear) {
+                  <span class="text-sm text-gray-500">{{ game.releaseYear }}</span>
+                }
+                @if (game.platforms?.length) {
+                  <div class="text-xs text-gray-400 mt-1">{{ getPlatformNames(game) }}</div>
+                }
+                @if (game.rating) {
+                  <div class="text-sm mt-2">⭐ {{ game.rating | number:'1.0-0' }}</div>
+                }
+              </div>
+              @if (addedGameIds.has(game.id)) {
+                <div class="py-3 bg-green-500 text-white font-medium text-center">
+                  ✓ Added
+                </div>
+              } @else {
+                <div class="flex mt-auto">
+                  <button
+                    class="flex-1 py-3 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors"
+                    [disabled]="adding()"
+                    (click)="openAddDialog(game, 'backlog')">
+                    + Library
+                  </button>
+                  <button
+                    class="flex-1 py-3 bg-purple-500 text-white font-medium hover:bg-purple-600 transition-colors border-l border-purple-400"
+                    [disabled]="adding()"
+                    (click)="openAddDialog(game, 'wishlist')">
+                    ♡ Wishlist
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </ng-template>
     </div>
 
     <!-- Add to Library/Wishlist Dialog -->
@@ -142,6 +163,9 @@ export class SearchContainer implements OnInit {
   adding = signal(false);
   addedGameIds = new Set<number>();
 
+  popularGames = signal<IgdbSearchResult[]>([]);
+  loadingPopular = signal(false);
+
   platforms = this.platformsService.platforms;
 
   // Filter platforms to only show ones available for the selected game
@@ -159,6 +183,7 @@ export class SearchContainer implements OnInit {
 
   ngOnInit() {
     this.platformsService.loadPlatforms();
+    this.loadPopularGames();
 
     this.searchSubject.pipe(
       debounceTime(300),
@@ -177,6 +202,19 @@ export class SearchContainer implements OnInit {
       error: (err) => {
         this.error.set('Failed to search games. Please try again.');
         this.loading.set(false);
+      }
+    });
+  }
+
+  private loadPopularGames() {
+    this.loadingPopular.set(true);
+    this.igdbService.getPopular(20).subscribe({
+      next: (games) => {
+        this.popularGames.set(games);
+        this.loadingPopular.set(false);
+      },
+      error: () => {
+        this.loadingPopular.set(false);
       }
     });
   }

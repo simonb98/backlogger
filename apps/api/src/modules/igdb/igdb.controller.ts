@@ -20,6 +20,14 @@ export class IgdbController {
     return Promise.all(results.map((game) => this.mapToSearchResult(game)));
   }
 
+  @Get('popular')
+  @ApiOperation({ summary: 'Get popular/trending games from IGDB' })
+  @ApiResponse({ status: 200, description: 'Popular games', type: [IgdbSearchResultDto] })
+  async getPopular(@Query('limit') limit?: number): Promise<IgdbSearchResultDto[]> {
+    const results = await this.igdbService.getPopular(limit || 20);
+    return Promise.all(results.map((game) => this.mapToSearchResult(game)));
+  }
+
   @Get('game/:igdbId')
   @ApiOperation({ summary: 'Get full game details from IGDB' })
   async getGame(@Param('igdbId', ParseIntPipe) igdbId: number) {

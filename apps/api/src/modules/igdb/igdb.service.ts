@@ -106,6 +106,26 @@ export class IgdbService implements OnModuleInit {
     return this.makeRequest<IgdbGame[]>('/games', body);
   }
 
+  async getPopular(limit: number = 20): Promise<IgdbGame[]> {
+    // Get games released in the last 6 months with high ratings, sorted by popularity
+    const sixMonthsAgo = Math.floor(Date.now() / 1000) - 6 * 30 * 24 * 60 * 60;
+    const now = Math.floor(Date.now() / 1000);
+
+    const body = `
+      fields name, slug, summary, cover.image_id, first_release_date,
+             genres.name, platforms.id, platforms.name, platforms.abbreviation,
+             total_rating, total_rating_count, hypes, follows;
+      where first_release_date >= ${sixMonthsAgo}
+        & first_release_date <= ${now}
+        & total_rating_count > 5
+        & cover != null;
+      sort total_rating desc;
+      limit ${limit};
+    `;
+
+    return this.makeRequest<IgdbGame[]>('/games', body);
+  }
+
   async getGame(igdbId: number): Promise<IgdbGame | null> {
     const body = `
       fields name, slug, summary, storyline, 
