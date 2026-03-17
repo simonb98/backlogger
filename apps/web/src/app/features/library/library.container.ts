@@ -203,11 +203,11 @@ interface GroupedGame {
       }
 
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        @for (grouped of groupedGames(); track grouped.game.id) {
+        @for (grouped of groupedGames(); track grouped.game.id; let idx = $index) {
           <div class="relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
                [class.ring-2]="isSelected(grouped.entries[0].id)"
                [class.ring-blue-500]="isSelected(grouped.entries[0].id)"
-               (click)="selectMode() ? toggleSelect(grouped.entries[0].id) : null">
+               (click)="selectMode() ? handleSelect($event, grouped.entries[0].id, idx) : null">
 
             @if (selectMode()) {
               <div class="absolute top-2 left-2 z-10">
@@ -290,6 +290,7 @@ export class LibraryContainer implements OnInit {
   // Selection
   selectMode = signal(false);
   selectedIds = signal<Set<number>>(new Set());
+  private lastSelectedIndex: number | null = null;
 
   platforms = this.platformsService.platforms;
 
@@ -481,14 +482,29 @@ export class LibraryContainer implements OnInit {
     return this.selectedIds().has(id);
   }
 
-  toggleSelect(id: number) {
+  handleSelect(event: MouseEvent, id: number, index: number) {
+    const games = this.groupedGames();
     const current = new Set(this.selectedIds());
-    if (current.has(id)) {
-      current.delete(id);
+
+    if (event.shiftKey && this.lastSelectedIndex !== null) {
+      // Shift-click: select range
+      const start = Math.min(this.lastSelectedIndex, index);
+      const end = Math.max(this.lastSelectedIndex, index);
+
+      for (let i = start; i <= end; i++) {
+        current.add(games[i].entries[0].id);
+      }
+      this.selectedIds.set(current);
     } else {
-      current.add(id);
+      // Normal click: toggle single item
+      if (current.has(id)) {
+        current.delete(id);
+      } else {
+        current.add(id);
+      }
+      this.selectedIds.set(current);
+      this.lastSelectedIndex = index;
     }
-    this.selectedIds.set(current);
   }
 
   selectAll() {
@@ -498,6 +514,7 @@ export class LibraryContainer implements OnInit {
 
   clearSelection() {
     this.selectedIds.set(new Set());
+    this.lastSelectedIndex = null;
   }
 
   exitSelectMode() {
