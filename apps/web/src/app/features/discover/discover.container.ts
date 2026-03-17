@@ -1,19 +1,15 @@
-import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import {
-  injectGamesQuery,
-  injectUpdateGameMutation,
-  UserGame,
-  GAME_STATUS_LABELS,
-} from '../../libs/client-games-api';
+import { injectGamesQuery, injectUpdateGameMutation, UserGame } from '../../libs/client-games-api';
 
 @Component({
   selector: 'app-discover-container',
-  standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
-    <div class="min-h-[calc(100vh-73px)] flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div
+      class="min-h-[calc(100vh-73px)] flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900"
+    >
       @if (loading()) {
         <div class="text-white/70">Loading your games...</div>
       } @else if (backlogGames().length === 0) {
@@ -26,7 +22,10 @@ import {
           <div class="text-6xl mb-4">🎮</div>
           <p class="text-xl font-semibold mb-2 text-white">You've seen all your games!</p>
           <p class="text-white/60 mb-6">{{ backlogGames().length }} games reviewed</p>
-          <button (click)="reset()" class="px-6 py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600">
+          <button
+            (click)="reset()"
+            class="px-6 py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600"
+          >
             Start Over
           </button>
         </div>
@@ -37,10 +36,10 @@ import {
             <div
               class="absolute inset-0 bg-slate-800 rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 border border-white/10"
               [class]="i === 0 ? cardClass() : ''"
-              [style.transform]="'scale(' + (1 - i * 0.03) + ') translateY(' + (i * 8) + 'px)'"
+              [style.transform]="'scale(' + (1 - i * 0.03) + ') translateY(' + i * 8 + 'px)'"
               [style.zIndex]="10 - i"
-              [style.opacity]="i < 3 ? 1 : 0">
-
+              [style.opacity]="i < 3 ? 1 : 0"
+            >
               @if (i === 0 && game.game) {
                 <div class="h-full flex">
                   <!-- Left: Poster Cover (2:3 aspect ratio) -->
@@ -49,9 +48,12 @@ import {
                       <img
                         [src]="getCoverUrl(game.game.coverUrl)"
                         [alt]="game.game.name"
-                        class="w-full h-full object-cover" />
+                        class="w-full h-full object-cover"
+                      />
                     } @else {
-                      <div class="w-full h-full flex items-center justify-center text-6xl bg-gradient-to-b from-purple-800 to-slate-900">
+                      <div
+                        class="w-full h-full flex items-center justify-center text-6xl bg-gradient-to-b from-purple-800 to-slate-900"
+                      >
                         🎮
                       </div>
                     }
@@ -65,7 +67,8 @@ import {
                         <img
                           [src]="game.game.screenshotUrls[activeScreenshot()]"
                           [alt]="game.game.name"
-                          class="w-full h-full object-cover" />
+                          class="w-full h-full object-cover"
+                        />
 
                         <!-- Screenshot Navigation Dots -->
                         @if (game.game.screenshotUrls.length > 1) {
@@ -74,8 +77,12 @@ import {
                               <button
                                 (click)="activeScreenshot.set($index)"
                                 class="w-2 h-2 rounded-full transition-all"
-                                [class]="$index === activeScreenshot() ? 'bg-white w-4' : 'bg-white/50 hover:bg-white/80'">
-                              </button>
+                                [class]="
+                                  $index === activeScreenshot()
+                                    ? 'bg-white w-4'
+                                    : 'bg-white/50 hover:bg-white/80'
+                                "
+                              ></button>
                             }
                           </div>
                         }
@@ -84,12 +91,14 @@ import {
                         @if (game.game.screenshotUrls.length > 1) {
                           <button
                             (click)="prevScreenshot(game.game.screenshotUrls.length)"
-                            class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70">
+                            class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
+                          >
                             ‹
                           </button>
                           <button
                             (click)="nextScreenshot(game.game.screenshotUrls.length)"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70">
+                            class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
+                          >
                             ›
                           </button>
                         }
@@ -98,9 +107,12 @@ import {
                         <img
                           [src]="getCoverUrl(game.game.coverUrl)"
                           [alt]="game.game.name"
-                          class="w-full h-full object-cover blur-sm scale-110 opacity-50" />
+                          class="w-full h-full object-cover blur-sm scale-110 opacity-50"
+                        />
                       } @else {
-                        <div class="w-full h-full flex items-center justify-center text-white/30 text-lg">
+                        <div
+                          class="w-full h-full flex items-center justify-center text-white/30 text-lg"
+                        >
                           No screenshots available
                         </div>
                       }
@@ -108,14 +120,18 @@ import {
 
                     <!-- Bottom: Game Info -->
                     <div class="flex-1 p-5 overflow-y-auto">
-                      <h2 class="text-2xl font-bold text-white mb-2 leading-tight">{{ game.game.name }}</h2>
+                      <h2 class="text-2xl font-bold text-white mb-2 leading-tight">
+                        {{ game.game.name }}
+                      </h2>
 
                       <div class="flex flex-wrap items-center gap-2 mb-3 text-sm text-white/60">
                         @if (game.platform) {
-                          <span class="px-2 py-0.5 bg-white/10 rounded">{{ game.platform.name }}</span>
+                          <span class="px-2 py-0.5 bg-white/10 rounded">{{
+                            game.platform.name
+                          }}</span>
                         }
                         @if (game.game.releaseDate) {
-                          <span>{{ game.game.releaseDate | date:'yyyy' }}</span>
+                          <span>{{ game.game.releaseDate | date: 'yyyy' }}</span>
                         }
                         @if (game.game.igdbRating) {
                           <span class="flex items-center gap-1">
@@ -131,16 +147,24 @@ import {
                       @if (game.game.genres && game.game.genres.length > 0) {
                         <div class="flex flex-wrap gap-1.5 mb-3">
                           @for (genre of game.game.genres.slice(0, 4); track genre) {
-                            <span class="px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded text-xs">{{ genre }}</span>
+                            <span
+                              class="px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded text-xs"
+                              >{{ genre }}</span
+                            >
                           }
                           @for (theme of (game.game.themes ?? []).slice(0, 2); track theme) {
-                            <span class="px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded text-xs">{{ theme }}</span>
+                            <span
+                              class="px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded text-xs"
+                              >{{ theme }}</span
+                            >
                           }
                         </div>
                       }
 
                       @if (game.game.summary) {
-                        <p class="text-white/70 text-sm line-clamp-3 leading-relaxed">{{ game.game.summary }}</p>
+                        <p class="text-white/70 text-sm line-clamp-3 leading-relaxed">
+                          {{ game.game.summary }}
+                        </p>
                       }
                     </div>
                   </div>
@@ -155,20 +179,23 @@ import {
           <button
             (click)="swipeLeft()"
             class="w-16 h-16 rounded-full bg-white/10 backdrop-blur shadow-lg flex flex-col items-center justify-center hover:bg-red-500/30 hover:scale-110 transition-all border border-white/20"
-            title="Not right now (30 days)">
+            title="Not right now (30 days)"
+          >
             <span class="text-2xl">👎</span>
             <span class="text-[10px] text-white/60">Later</span>
           </button>
           <button
             (click)="pickRandom()"
             class="w-14 h-14 rounded-full bg-white/10 backdrop-blur shadow-lg flex items-center justify-center text-2xl hover:bg-yellow-500/30 hover:scale-110 transition-all border border-white/20"
-            title="Jump to random">
+            title="Jump to random"
+          >
             🎲
           </button>
           <button
             (click)="swipeRight()"
             class="w-16 h-16 rounded-full bg-white/10 backdrop-blur shadow-lg flex flex-col items-center justify-center hover:bg-green-500/30 hover:scale-110 transition-all border border-white/20"
-            title="Add to Up Next">
+            title="Add to Up Next"
+          >
             <span class="text-2xl">👍</span>
             <span class="text-[10px] text-white/60">Up Next</span>
           </button>
@@ -199,11 +226,11 @@ export class DiscoverContainer {
     const validStatuses = ['backlog', 'wishlist', 'playing', 'on_hold'];
     const now = new Date();
     return this.shuffled(
-      this.allGames().filter(g => {
+      this.allGames().filter((g) => {
         if (!validStatuses.includes(g.status)) return false;
         if (g.skippedUntil && new Date(g.skippedUntil) > now) return false;
         return true;
-      })
+      }),
     );
   });
 
@@ -235,11 +262,11 @@ export class DiscoverContainer {
         { id: game.id, updates: { skippedUntil: skipUntil.toISOString() } },
         {
           onSettled: () => {
-            this.currentIndex.update(i => i + 1);
+            this.currentIndex.update((i) => i + 1);
             this.activeScreenshot.set(0);
             this.cardClass.set('');
           },
-        }
+        },
       );
     }, 200);
   }
@@ -254,11 +281,11 @@ export class DiscoverContainer {
         { id: game.id, updates: { status: 'up_next' } },
         {
           onSuccess: () => {
-            this.currentIndex.update(i => i + 1);
+            this.currentIndex.update((i) => i + 1);
             this.activeScreenshot.set(0);
             this.cardClass.set('');
           },
-        }
+        },
       );
     }, 200);
   }
@@ -270,7 +297,7 @@ export class DiscoverContainer {
       return;
     }
     const randomSkip = Math.floor(Math.random() * (remaining - 1)) + 1;
-    this.currentIndex.update(i => i + randomSkip);
+    this.currentIndex.update((i) => i + randomSkip);
     this.activeScreenshot.set(0);
   }
 
@@ -294,11 +321,10 @@ export class DiscoverContainer {
   }
 
   nextScreenshot(total: number) {
-    this.activeScreenshot.update(i => (i + 1) % Math.min(total, 5));
+    this.activeScreenshot.update((i) => (i + 1) % Math.min(total, 5));
   }
 
   prevScreenshot(total: number) {
-    this.activeScreenshot.update(i => (i - 1 + Math.min(total, 5)) % Math.min(total, 5));
+    this.activeScreenshot.update((i) => (i - 1 + Math.min(total, 5)) % Math.min(total, 5));
   }
 }
-

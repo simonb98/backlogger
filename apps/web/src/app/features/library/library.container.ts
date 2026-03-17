@@ -1,15 +1,15 @@
-import { Component, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
-  injectGamesQuery,
-  injectBulkUpdateGamesMutation,
-  UserGame,
-  GameStatus,
   Game,
-  GAME_STATUS_LABELS,
   GAME_STATUS_COLORS,
+  GAME_STATUS_LABELS,
+  GameStatus,
+  injectBulkUpdateGamesMutation,
+  injectGamesQuery,
+  UserGame,
 } from '../../libs/client-games-api';
 import { injectPlatforms, Platform } from '../../libs/client-platforms-api';
 
@@ -28,7 +28,6 @@ interface GroupedGame {
 
 @Component({
   selector: 'app-library-container',
-  standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="max-w-7xl mx-auto p-6">
@@ -36,21 +35,36 @@ interface GroupedGame {
         <h1 class="text-3xl font-bold">My Library</h1>
         <div class="flex gap-2">
           @if (!selectMode()) {
-            <button (click)="selectMode.set(true)" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+            <button
+              (click)="selectMode.set(true)"
+              class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+            >
               Select
             </button>
           } @else {
-            <button (click)="selectAll()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+            <button
+              (click)="selectAll()"
+              class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+            >
               Select All
             </button>
-            <button (click)="exitSelectMode()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+            <button
+              (click)="exitSelectMode()"
+              class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+            >
               Cancel
             </button>
           }
-          <a routerLink="/import" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors no-underline">
+          <a
+            routerLink="/import"
+            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors no-underline"
+          >
             Import
           </a>
-          <a routerLink="/search" class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors no-underline">
+          <a
+            routerLink="/search"
+            class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors no-underline"
+          >
             + Add
           </a>
         </div>
@@ -68,17 +82,22 @@ interface GroupedGame {
             class="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
           />
           <!-- Sort -->
-          <select [ngModel]="sortBy()" (ngModelChange)="sortBy.set($event); currentPage.set(1)"
-                  class="px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-blue-500">
+          <select
+            [ngModel]="sortBy()"
+            (ngModelChange)="sortBy.set($event); currentPage.set(1)"
+            class="px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-blue-500"
+          >
             <option value="date_added">Date Added</option>
             <option value="name">Name</option>
             <option value="rating">Rating</option>
             <option value="playtime">Playtime</option>
             <option value="release_date">Release Date</option>
           </select>
-          <button (click)="toggleSortOrder()"
-                  class="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
-                  [title]="sortOrder() === 'asc' ? 'Ascending' : 'Descending'">
+          <button
+            (click)="toggleSortOrder()"
+            class="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+            [title]="sortOrder() === 'asc' ? 'Ascending' : 'Descending'"
+          >
             {{ sortOrder() === 'asc' ? '↑' : '↓' }}
           </button>
         </div>
@@ -88,8 +107,11 @@ interface GroupedGame {
           <span class="text-sm text-gray-500 mr-2">Status:</span>
           <button
             class="px-3 py-1.5 rounded-full text-sm font-medium transition-all"
-            [class]="selectedStatus() === null ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'"
-            (click)="setStatus(null)">
+            [class]="
+              selectedStatus() === null ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
+            "
+            (click)="setStatus(null)"
+          >
             All
           </button>
           @for (status of statuses; track status) {
@@ -97,7 +119,8 @@ interface GroupedGame {
               class="px-3 py-1.5 rounded-full text-sm font-medium transition-all"
               [class]="selectedStatus() === status ? 'text-white' : 'bg-gray-100 hover:bg-gray-200'"
               [style.backgroundColor]="selectedStatus() === status ? getStatusColor(status) : ''"
-              (click)="setStatus(status)">
+              (click)="setStatus(status)"
+            >
               {{ statusLabels[status] }}
             </button>
           }
@@ -105,8 +128,11 @@ interface GroupedGame {
           <span class="text-gray-300 mx-2">|</span>
 
           <span class="text-sm text-gray-500 mr-2">Platform:</span>
-          <select [ngModel]="selectedPlatform()" (ngModelChange)="selectedPlatform.set($event); currentPage.set(1)"
-                  class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none">
+          <select
+            [ngModel]="selectedPlatform()"
+            (ngModelChange)="selectedPlatform.set($event); currentPage.set(1)"
+            class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none"
+          >
             <option [ngValue]="null">All Platforms</option>
             @for (platform of platforms(); track platform.id) {
               <option [ngValue]="platform.id">{{ platform.name }}</option>
@@ -123,8 +149,11 @@ interface GroupedGame {
 
           <!-- Per Page -->
           <span class="text-sm text-gray-500 mr-2">Show:</span>
-          <select [ngModel]="perPage()" (ngModelChange)="setPerPage($event)"
-                  class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none">
+          <select
+            [ngModel]="perPage()"
+            (ngModelChange)="setPerPage($event)"
+            class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none"
+          >
             <option [ngValue]="20">20</option>
             <option [ngValue]="50">50</option>
             <option [ngValue]="100">100</option>
@@ -135,9 +164,16 @@ interface GroupedGame {
 
       <!-- Bulk Edit Bar -->
       @if (selectedIds().size > 0) {
-        <div class="bg-blue-600 text-white py-3 px-6 rounded-xl shadow-sm mb-4 flex items-center justify-between">
+        <div
+          class="bg-blue-600 text-white py-3 px-6 rounded-xl shadow-sm mb-4 flex items-center justify-between"
+        >
           <div class="flex items-center gap-4">
-            <button (click)="clearSelection()" class="w-8 h-8 flex items-center justify-center bg-blue-700 hover:bg-blue-800 rounded">✕</button>
+            <button
+              (click)="clearSelection()"
+              class="w-8 h-8 flex items-center justify-center bg-blue-700 hover:bg-blue-800 rounded"
+            >
+              ✕
+            </button>
             <span class="font-medium">{{ selectedIds().size }} game(s) selected</span>
           </div>
           <div class="flex items-center gap-2">
@@ -146,7 +182,8 @@ interface GroupedGame {
               <button
                 (click)="bulkSetStatus(status)"
                 class="px-3 py-1.5 rounded text-sm font-medium transition-colors hover:opacity-90"
-                [style.backgroundColor]="statusColors[status]">
+                [style.backgroundColor]="statusColors[status]"
+              >
                 {{ statusLabels[status] }}
               </button>
             }
@@ -161,7 +198,10 @@ interface GroupedGame {
             @if (perPage() === 0) {
               {{ totalGames() }} games
             } @else {
-              Showing {{ (currentPage() - 1) * perPage() + 1 }}-{{ Math.min(currentPage() * perPage(), totalGames()) }} of {{ totalGames() }} games
+              Showing {{ (currentPage() - 1) * perPage() + 1 }}-{{
+                Math.min(currentPage() * perPage(), totalGames())
+              }}
+              of {{ totalGames() }} games
             }
           </p>
 
@@ -170,14 +210,18 @@ interface GroupedGame {
               <button
                 (click)="goToPage(currentPage() - 1)"
                 [disabled]="currentPage() === 1"
-                class="px-3 py-1 rounded border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                class="px-3 py-1 rounded border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 ← Prev
               </button>
-              <span class="text-sm text-gray-600">Page {{ currentPage() }} of {{ totalPages() }}</span>
+              <span class="text-sm text-gray-600"
+                >Page {{ currentPage() }} of {{ totalPages() }}</span
+              >
               <button
                 (click)="goToPage(currentPage() + 1)"
                 [disabled]="currentPage() >= totalPages()"
-                class="px-3 py-1 rounded border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                class="px-3 py-1 rounded border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 Next →
               </button>
             </div>
@@ -197,7 +241,10 @@ interface GroupedGame {
         <div class="text-center py-16 bg-gray-100 rounded-xl">
           <h2 class="text-xl font-semibold mb-2">No games yet!</h2>
           <p class="text-gray-500 mb-6">Search for games or import from Steam.</p>
-          <a routerLink="/search" class="inline-block px-8 py-3 bg-blue-500 text-white rounded-lg font-medium no-underline hover:bg-blue-600">
+          <a
+            routerLink="/search"
+            class="inline-block px-8 py-3 bg-blue-500 text-white rounded-lg font-medium no-underline hover:bg-blue-600"
+          >
             Search Games
           </a>
         </div>
@@ -206,23 +253,34 @@ interface GroupedGame {
       @if (!loading() && groupedGames().length === 0 && hasActiveFilters()) {
         <div class="text-center py-12 text-gray-500">
           No games match your filters.
-          <button (click)="clearFilters()" class="text-blue-500 hover:underline ml-1">Clear filters</button>
+          <button (click)="clearFilters()" class="text-blue-500 hover:underline ml-1">
+            Clear filters
+          </button>
         </div>
       }
 
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
-           [class.select-none]="selectMode()">
+      <div
+        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
+        [class.select-none]="selectMode()"
+      >
         @for (grouped of groupedGames(); track grouped.game.id; let idx = $index) {
-          <div class="relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
-               [class.ring-2]="isSelected(grouped.entries[0].id)"
-               [class.ring-blue-500]="isSelected(grouped.entries[0].id)"
-               [class.cursor-pointer]="selectMode()"
-               (click)="selectMode() ? handleSelect($event, grouped.entries[0].id, idx) : null">
-
+          <div
+            class="relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
+            [class.ring-2]="isSelected(grouped.entries[0].id)"
+            [class.ring-blue-500]="isSelected(grouped.entries[0].id)"
+            [class.cursor-pointer]="selectMode()"
+            (click)="selectMode() ? handleSelect($event, grouped.entries[0].id, idx) : null"
+          >
             @if (selectMode()) {
               <div class="absolute top-2 left-2 z-10">
-                <div class="w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer"
-                     [class]="isSelected(grouped.entries[0].id) ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300'">
+                <div
+                  class="w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer"
+                  [class]="
+                    isSelected(grouped.entries[0].id)
+                      ? 'bg-blue-500 border-blue-500 text-white'
+                      : 'bg-white border-gray-300'
+                  "
+                >
                   @if (isSelected(grouped.entries[0].id)) {
                     <span class="text-sm">✓</span>
                   }
@@ -230,20 +288,30 @@ interface GroupedGame {
               </div>
             }
 
-            <a [routerLink]="selectMode() ? null : ['/games', grouped.entries[0].id]"
-               [class.pointer-events-none]="selectMode()"
-               class="block no-underline text-inherit">
+            <a
+              [routerLink]="selectMode() ? null : ['/games', grouped.entries[0].id]"
+              [class.pointer-events-none]="selectMode()"
+              class="block no-underline text-inherit"
+            >
               <div class="relative aspect-[3/4] bg-gray-100">
                 @if (grouped.game.coverUrl) {
-                  <img [src]="grouped.game.coverUrl" [alt]="grouped.game.name" class="w-full h-full object-cover" />
+                  <img
+                    [src]="grouped.game.coverUrl"
+                    [alt]="grouped.game.name"
+                    class="w-full h-full object-cover"
+                  />
                 } @else {
-                  <div class="flex items-center justify-center h-full text-gray-400 text-sm">No Image</div>
+                  <div class="flex items-center justify-center h-full text-gray-400 text-sm">
+                    No Image
+                  </div>
                 }
                 @if (grouped.isFullyCompleted) {
                   <span class="absolute top-2 right-2 text-2xl" title="100% Completed">🏆</span>
                 } @else {
-                  <span class="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-semibold text-white uppercase"
-                        [style.backgroundColor]="getStatusColor(grouped.primaryStatus)">
+                  <span
+                    class="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-semibold text-white uppercase"
+                    [style.backgroundColor]="getStatusColor(grouped.primaryStatus)"
+                  >
                     {{ statusLabels[grouped.primaryStatus] }}
                   </span>
                 }
@@ -252,7 +320,9 @@ interface GroupedGame {
                 <h3 class="font-semibold text-sm line-clamp-2 mb-1">{{ grouped.game.name }}</h3>
                 <div class="flex flex-wrap gap-1 mb-1">
                   @for (platform of grouped.platforms; track platform.id) {
-                    <span class="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-medium text-gray-600">
+                    <span
+                      class="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-medium text-gray-600"
+                    >
                       {{ platform.abbreviation }}
                     </span>
                   }
@@ -309,8 +379,24 @@ export class LibraryContainer {
 
   readonly statusLabels = GAME_STATUS_LABELS;
   readonly statusColors = GAME_STATUS_COLORS;
-  readonly statuses: GameStatus[] = ['playing', 'up_next', 'backlog', 'completed', 'on_hold', 'dropped', 'wishlist'];
-  readonly statusPriority: GameStatus[] = ['playing', 'up_next', 'backlog', 'on_hold', 'wishlist', 'completed', 'dropped'];
+  readonly statuses: GameStatus[] = [
+    'playing',
+    'up_next',
+    'backlog',
+    'completed',
+    'on_hold',
+    'dropped',
+    'wishlist',
+  ];
+  readonly statusPriority: GameStatus[] = [
+    'playing',
+    'up_next',
+    'backlog',
+    'on_hold',
+    'wishlist',
+    'completed',
+    'dropped',
+  ];
 
   Math = Math;
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -319,17 +405,18 @@ export class LibraryContainer {
   games = computed(() => this.gamesQuery.data()?.games || []);
   totalGames = computed(() => this.gamesQuery.data()?.total || 0);
   loading = computed(() => this.gamesQuery.isPending());
-  error = computed(() => this.gamesQuery.error() ? 'Failed to load games' : null);
+  error = computed(() => (this.gamesQuery.error() ? 'Failed to load games' : null));
 
   totalPages = computed(() => {
     if (this.perPage() === 0) return 1;
     return Math.ceil(this.totalGames() / this.perPage());
   });
 
-  hasActiveFilters = computed(() =>
-    this.selectedStatus() !== null ||
-    this.selectedPlatform() !== null ||
-    this.searchQuery().length > 0
+  hasActiveFilters = computed(
+    () =>
+      this.selectedStatus() !== null ||
+      this.selectedPlatform() !== null ||
+      this.searchQuery().length > 0,
   );
 
   groupedGames = computed(() => {
@@ -345,7 +432,10 @@ export class LibraryContainer {
       if (existing) {
         existing.entries.push(userGame);
         existing.totalPlaytimeMins += userGame.totalPlaytimeMins;
-        if (userGame.rating && (!existing.highestRating || userGame.rating > existing.highestRating)) {
+        if (
+          userGame.rating &&
+          (!existing.highestRating || userGame.rating > existing.highestRating)
+        ) {
           existing.highestRating = userGame.rating;
         }
         if (userGame.platform) {
@@ -452,7 +542,7 @@ export class LibraryContainer {
   }
 
   selectAll() {
-    const allIds = this.groupedGames().map(g => g.entries[0].id);
+    const allIds = this.groupedGames().map((g) => g.entries[0].id);
     this.selectedIds.set(new Set(allIds));
   }
 
@@ -472,4 +562,3 @@ export class LibraryContainer {
     this.bulkUpdateMutation.mutate({ ids, updates: { status } });
   }
 }
-

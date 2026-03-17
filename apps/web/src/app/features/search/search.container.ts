@@ -2,14 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, of, Subject, switchMap } from 'rxjs';
-import { injectIgdbPopularQuery, IgdbSearchResult } from '../../libs/client-igdb-api';
-import { injectAddGameMutation, GAMES_QUERY_KEY } from '../../libs/client-games-api';
-import { injectPlatforms } from '../../libs/client-platforms-api';
 import { IgdbService } from '../../core/services';
+import { injectAddGameMutation } from '../../libs/client-games-api';
+import { IgdbSearchResult, injectIgdbPopularQuery } from '../../libs/client-igdb-api';
+import { injectPlatforms } from '../../libs/client-platforms-api';
 
 @Component({
   selector: 'app-search-container',
-  standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
     <div class="max-w-7xl mx-auto p-6">

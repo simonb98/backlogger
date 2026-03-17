@@ -1,18 +1,16 @@
-import { Component, inject, signal, HostListener, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
-  injectSteamProfileMutation,
-  injectSteamImportMutation,
-  SteamProfileInfo,
-  ImportResult,
   ImportProgress,
+  ImportResult,
+  injectSteamImportMutation,
+  injectSteamProfileMutation,
 } from '../../libs/client-steam-api';
 
 @Component({
   selector: 'app-import-container',
-  standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
     <div class="max-w-2xl mx-auto p-6">
@@ -30,13 +28,14 @@ import {
             class="w-full p-4 border-2 border-gray-200 rounded-lg mb-4 focus:outline-none focus:border-blue-500"
           />
           <p class="text-sm text-gray-500 mb-4">
-            Paste your Steam profile URL, Steam ID, or vanity name.<br>
+            Paste your Steam profile URL, Steam ID, or vanity name.<br />
             Make sure your Steam profile and game library are set to <strong>public</strong>.
           </p>
           <button
             (click)="lookupProfile()"
             [disabled]="loading() || !steamInput"
-            class="w-full py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 disabled:opacity-50">
+            class="w-full py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 disabled:opacity-50"
+          >
             {{ loading() ? 'Looking up...' : 'Find Profile' }}
           </button>
           @if (error()) {
@@ -52,18 +51,22 @@ import {
             <img [src]="profile()!.profile.avatar" class="w-16 h-16 rounded-full" />
             <div>
               <h2 class="text-xl font-semibold">{{ profile()!.profile.name }}</h2>
-              <p class="text-gray-500">{{ profile()!.gameCount }} games · {{ profile()!.totalPlaytimeHours }}h played</p>
+              <p class="text-gray-500">
+                {{ profile()!.gameCount }} games · {{ profile()!.totalPlaytimeHours }}h played
+              </p>
             </div>
           </div>
           <div class="flex gap-4">
             <button
               (click)="reset()"
-              class="flex-1 py-3 bg-gray-100 rounded-lg font-medium hover:bg-gray-200">
+              class="flex-1 py-3 bg-gray-100 rounded-lg font-medium hover:bg-gray-200"
+            >
               Back
             </button>
             <button
               (click)="startImport()"
-              class="flex-1 py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600">
+              class="flex-1 py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600"
+            >
               Import Games
             </button>
           </div>
@@ -84,8 +87,8 @@ import {
             <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
               <div
                 class="h-full bg-blue-500 transition-all duration-300"
-                [style.width.%]="progressPercent()">
-              </div>
+                [style.width.%]="progressPercent()"
+              ></div>
             </div>
           </div>
 
@@ -93,7 +96,9 @@ import {
           @if (progress()?.gameName) {
             <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
               @if (progress()?.status === 'processing') {
-                <div class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <div
+                  class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"
+                ></div>
               } @else if (progress()?.status === 'imported') {
                 <span class="text-green-500">✓</span>
               } @else if (progress()?.status === 'skipped') {
@@ -146,9 +151,16 @@ import {
             @for (game of importResult()!.games; track game.name) {
               <div class="flex justify-between items-center px-4 py-2 border-b last:border-b-0">
                 <span class="truncate">{{ game.name }}</span>
-                <span class="text-sm px-2 py-1 rounded"
-                  [class]="game.status === 'imported' ? 'bg-green-100 text-green-700' : 
-                           game.status === 'skipped' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'">
+                <span
+                  class="text-sm px-2 py-1 rounded"
+                  [class]="
+                    game.status === 'imported'
+                      ? 'bg-green-100 text-green-700'
+                      : game.status === 'skipped'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-red-100 text-red-700'
+                  "
+                >
                   {{ game.status }}
                 </span>
               </div>
@@ -157,7 +169,8 @@ import {
 
           <button
             (click)="goToLibrary()"
-            class="w-full py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600">
+            class="w-full py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600"
+          >
             View Library
           </button>
         </div>
@@ -199,7 +212,9 @@ export class ImportContainer {
   // Check if user can leave (used by route guard)
   canDeactivate(): boolean {
     if (this.importing()) {
-      return confirm('Import is in progress. If you leave, you will lose visibility of the progress (but the import will continue in the background). Leave anyway?');
+      return confirm(
+        'Import is in progress. If you leave, you will lose visibility of the progress (but the import will continue in the background). Leave anyway?',
+      );
     }
     return true;
   }
@@ -231,11 +246,11 @@ export class ImportContainer {
 
         // Update counters based on status
         if (progress.status === 'imported') {
-          this.importedCount.update(c => c + 1);
+          this.importedCount.update((c) => c + 1);
         } else if (progress.status === 'skipped') {
-          this.skippedCount.update(c => c + 1);
+          this.skippedCount.update((c) => c + 1);
         } else if (progress.status === 'failed') {
-          this.failedCount.update(c => c + 1);
+          this.failedCount.update((c) => c + 1);
         }
       },
       onSuccess: (result) => {
@@ -258,4 +273,3 @@ export class ImportContainer {
     this.router.navigate(['/library']);
   }
 }
-
