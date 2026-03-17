@@ -1,8 +1,8 @@
 import { inject } from '@angular/core';
-import { injectQuery, injectMutation, injectQueryClient } from '@tanstack/angular-query-experimental';
+import { injectMutation, injectQuery, QueryClient } from '@tanstack/angular-query-experimental';
 import { lastValueFrom } from 'rxjs';
+import { GameFilterParams, GameStatus, UpdateGameDto } from '../../core/models';
 import { GamesService } from '../../core/services/games.service';
-import { GameFilterParams, UpdateGameDto, GameStatus } from '../../core/models';
 
 export const GAMES_QUERY_KEY = 'games';
 export const GAME_DETAIL_QUERY_KEY = 'game-detail';
@@ -75,7 +75,7 @@ export function injectGameQuery(getId: () => number | null) {
  */
 export function injectAddGameMutation() {
   const gamesService = inject(GamesService);
-  const queryClient = injectQueryClient();
+  const queryClient = inject(QueryClient);
 
   return injectMutation(() => ({
     mutationFn: (data: { igdbId: number; platformId: number; status: 'backlog' | 'wishlist' }) =>
@@ -91,7 +91,7 @@ export function injectAddGameMutation() {
  */
 export function injectUpdateGameMutation() {
   const gamesService = inject(GamesService);
-  const queryClient = injectQueryClient();
+  const queryClient = inject(QueryClient);
 
   return injectMutation(() => ({
     mutationFn: ({ id, updates }: { id: number; updates: UpdateGameDto }) =>
@@ -108,7 +108,7 @@ export function injectUpdateGameMutation() {
  */
 export function injectBulkUpdateGamesMutation(options?: { onSuccess?: () => void }) {
   const gamesService = inject(GamesService);
-  const queryClient = injectQueryClient();
+  const queryClient = inject(QueryClient);
 
   return injectMutation(() => ({
     mutationFn: ({ ids, updates }: { ids: number[]; updates: { status: GameStatus } }) =>
@@ -125,7 +125,7 @@ export function injectBulkUpdateGamesMutation(options?: { onSuccess?: () => void
  */
 export function injectDeleteGameMutation() {
   const gamesService = inject(GamesService);
-  const queryClient = injectQueryClient();
+  const queryClient = inject(QueryClient);
 
   return injectMutation(() => ({
     mutationFn: (id: number) => lastValueFrom(gamesService.deleteGame(id)),

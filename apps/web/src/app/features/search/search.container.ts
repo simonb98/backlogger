@@ -1,11 +1,10 @@
-import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { debounceTime, distinctUntilChanged, Subject, switchMap, of, lastValueFrom } from 'rxjs';
-import { injectQuery, injectMutation, injectQueryClient } from '@tanstack/angular-query-experimental';
-import { IgdbService, PlatformsService, GamesService } from '../../core/services';
+import { injectMutation, injectQuery, QueryClient } from '@tanstack/angular-query-experimental';
+import { debounceTime, distinctUntilChanged, lastValueFrom, of, Subject, switchMap } from 'rxjs';
 import { IgdbSearchResult } from '../../core/models';
+import { GamesService, IgdbService, PlatformsService } from '../../core/services';
 
 @Component({
   selector: 'app-search-container',
@@ -53,7 +52,9 @@ import { IgdbSearchResult } from '../../core/models';
           @if (loadingPopular()) {
             <div class="text-gray-500">Loading popular games...</div>
           } @else {
-            <ng-container *ngTemplateOutlet="gameGrid; context: { games: popularGames() }"></ng-container>
+            <ng-container
+              *ngTemplateOutlet="gameGrid; context: { games: popularGames() }"
+            ></ng-container>
           }
         </div>
       }
@@ -62,12 +63,16 @@ import { IgdbSearchResult } from '../../core/models';
       <ng-template #gameGrid let-games="games">
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
           @for (game of games; track game.id) {
-            <div class="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col h-full">
+            <div
+              class="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col h-full"
+            >
               <div class="aspect-[3/4] bg-gray-100">
                 @if (game.coverUrl) {
                   <img [src]="game.coverUrl" [alt]="game.name" class="w-full h-full object-cover" />
                 } @else {
-                  <div class="flex items-center justify-center h-full text-gray-400 text-sm">No Image</div>
+                  <div class="flex items-center justify-center h-full text-gray-400 text-sm">
+                    No Image
+                  </div>
                 }
               </div>
               <div class="p-4 flex-1">
@@ -79,25 +84,25 @@ import { IgdbSearchResult } from '../../core/models';
                   <div class="text-xs text-gray-400 mt-1">{{ getPlatformNames(game) }}</div>
                 }
                 @if (game.rating) {
-                  <div class="text-sm mt-2">⭐ {{ game.rating | number:'1.0-0' }}</div>
+                  <div class="text-sm mt-2">⭐ {{ game.rating | number: '1.0-0' }}</div>
                 }
               </div>
               @if (addedGameIds.has(game.id)) {
-                <div class="py-3 bg-green-500 text-white font-medium text-center">
-                  ✓ Added
-                </div>
+                <div class="py-3 bg-green-500 text-white font-medium text-center">✓ Added</div>
               } @else {
                 <div class="flex mt-auto">
                   <button
                     class="flex-1 py-3 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors"
                     [disabled]="adding()"
-                    (click)="openAddDialog(game, 'backlog')">
+                    (click)="openAddDialog(game, 'backlog')"
+                  >
                     + Library
                   </button>
                   <button
                     class="flex-1 py-3 bg-purple-500 text-white font-medium hover:bg-purple-600 transition-colors border-l border-purple-400"
                     [disabled]="adding()"
-                    (click)="openAddDialog(game, 'wishlist')">
+                    (click)="openAddDialog(game, 'wishlist')"
+                  >
                     ♡ Wishlist
                   </button>
                 </div>
@@ -110,17 +115,28 @@ import { IgdbSearchResult } from '../../core/models';
 
     <!-- Add to Library/Wishlist Dialog -->
     @if (selectedGame()) {
-      <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" (click)="closeAddDialog()">
-        <div class="bg-white p-8 rounded-xl w-full max-w-md mx-4" (click)="$event.stopPropagation()">
-          <h2 class="text-xl font-bold mb-4">{{ addStatus() === 'wishlist' ? 'Add to Wishlist' : 'Add to Library' }}</h2>
-          <p class="mb-4">Adding: <strong>{{ selectedGame()!.name }}</strong></p>
+      <div
+        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+        (click)="closeAddDialog()"
+      >
+        <div
+          class="bg-white p-8 rounded-xl w-full max-w-md mx-4"
+          (click)="$event.stopPropagation()"
+        >
+          <h2 class="text-xl font-bold mb-4">
+            {{ addStatus() === 'wishlist' ? 'Add to Wishlist' : 'Add to Library' }}
+          </h2>
+          <p class="mb-4">
+            Adding: <strong>{{ selectedGame()!.name }}</strong>
+          </p>
 
           <label for="platform-select" class="block font-medium mb-2">Select Platform:</label>
           <select
             id="platform-select"
             [value]="selectedPlatformId() ?? ''"
             (change)="selectedPlatformId.set(+$any($event.target).value)"
-            class="w-full p-3 border-2 border-gray-200 rounded-lg mb-6">
+            class="w-full p-3 border-2 border-gray-200 rounded-lg mb-6"
+          >
             <option value="" disabled>Choose a platform...</option>
             @for (platform of availablePlatforms(); track platform.id) {
               <option [value]="platform.id">{{ platform.name }}</option>
@@ -128,7 +144,10 @@ import { IgdbSearchResult } from '../../core/models';
           </select>
 
           <div class="flex gap-4">
-            <button class="flex-1 py-3 bg-gray-100 rounded-lg font-medium hover:bg-gray-200" (click)="closeAddDialog()">
+            <button
+              class="flex-1 py-3 bg-gray-100 rounded-lg font-medium hover:bg-gray-200"
+              (click)="closeAddDialog()"
+            >
               Cancel
             </button>
             <button
@@ -138,8 +157,15 @@ import { IgdbSearchResult } from '../../core/models';
               [class.bg-purple-500]="addStatus() === 'wishlist'"
               [class.hover:bg-purple-600]="addStatus() === 'wishlist'"
               [disabled]="!selectedPlatformId() || adding()"
-              (click)="addGame()">
-              {{ adding() ? 'Adding...' : (addStatus() === 'wishlist' ? 'Add to Wishlist' : 'Add to Library') }}
+              (click)="addGame()"
+            >
+              {{
+                adding()
+                  ? 'Adding...'
+                  : addStatus() === 'wishlist'
+                    ? 'Add to Wishlist'
+                    : 'Add to Library'
+              }}
             </button>
           </div>
         </div>
@@ -151,8 +177,7 @@ export class SearchContainer {
   private igdbService = inject(IgdbService);
   private platformsService = inject(PlatformsService);
   private gamesService = inject(GamesService);
-  private router = inject(Router);
-  private queryClient = injectQueryClient();
+  private queryClient = inject(QueryClient);
 
   searchQuery = signal('');
   results = signal<IgdbSearchResult[]>([]);
@@ -198,8 +223,8 @@ export class SearchContainer {
     const allPlatforms = this.platforms();
     if (!game?.platforms?.length) return allPlatforms;
 
-    const gamePlatformIds = new Set(game.platforms.map(p => p.id));
-    return allPlatforms.filter(p => gamePlatformIds.has(p.id));
+    const gamePlatformIds = new Set(game.platforms.map((p) => p.id));
+    return allPlatforms.filter((p) => gamePlatformIds.has(p.id));
   });
 
   private searchSubject = new Subject<string>();
@@ -208,25 +233,27 @@ export class SearchContainer {
     this.platformsService.loadPlatforms();
 
     // Search still uses RxJS for debouncing
-    this.searchSubject.pipe(
-      debounceTime(300),
-      distinctUntilChanged(),
-      switchMap((query) => {
-        if (query.length < 2) return of([]);
-        this.loading.set(true);
-        this.error.set(null);
-        return this.igdbService.search(query);
-      })
-    ).subscribe({
-      next: (results) => {
-        this.results.set(results);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set('Failed to search games. Please try again.');
-        this.loading.set(false);
-      }
-    });
+    this.searchSubject
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        switchMap((query) => {
+          if (query.length < 2) return of([]);
+          this.loading.set(true);
+          this.error.set(null);
+          return this.igdbService.search(query);
+        }),
+      )
+      .subscribe({
+        next: (results) => {
+          this.results.set(results);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set('Failed to search games. Please try again.');
+          this.loading.set(false);
+        },
+      });
   }
 
   onSearchInput(event: Event) {
@@ -236,7 +263,7 @@ export class SearchContainer {
   }
 
   getPlatformNames(game: IgdbSearchResult): string {
-    return game.platforms?.map(p => p.abbreviation || p.name).join(', ') || '';
+    return game.platforms?.map((p) => p.abbreviation || p.name).join(', ') || '';
   }
 
   openAddDialog(game: IgdbSearchResult, status: 'backlog' | 'wishlist') {
@@ -259,7 +286,11 @@ export class SearchContainer {
     this.selectedPlatformId.set(null);
   }
 
-  private addGameDirectly(game: IgdbSearchResult, platformId: number, status: 'backlog' | 'wishlist') {
+  private addGameDirectly(
+    game: IgdbSearchResult,
+    platformId: number,
+    status: 'backlog' | 'wishlist',
+  ) {
     this.addGameMutation.mutate({ igdbId: game.id, platformId, status });
   }
 
@@ -272,4 +303,3 @@ export class SearchContainer {
     this.addGameMutation.mutate({ igdbId: game.id, platformId, status });
   }
 }
-

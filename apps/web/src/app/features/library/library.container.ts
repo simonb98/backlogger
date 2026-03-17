@@ -1,11 +1,17 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { injectQuery, injectMutation, injectQueryClient } from '@tanstack/angular-query-experimental';
-import { lastValueFrom } from 'rxjs';
-import { GamesService, PlatformsService } from '../../core/services';
-import { UserGame, GameStatus, Game, Platform, GAME_STATUS_LABELS, GAME_STATUS_COLORS, GameFilterParams } from '../../core/models';
+import {
+  injectGamesQuery,
+  injectBulkUpdateGamesMutation,
+  UserGame,
+  GameStatus,
+  Game,
+  GAME_STATUS_LABELS,
+  GAME_STATUS_COLORS,
+} from '../../libs/client-games-api';
+import { injectPlatforms, Platform } from '../../libs/client-platforms-api';
 
 type SortField = 'name' | 'date_added' | 'rating' | 'playtime' | 'release_date';
 type SortOrder = 'asc' | 'desc';
@@ -268,10 +274,6 @@ interface GroupedGame {
   `,
 })
 export class LibraryContainer {
-  private gamesService = inject(GamesService);
-  private platformsService = inject(PlatformsService);
-  private queryClient = injectQueryClient();
-
   // Filters
   selectedStatus = signal<GameStatus | null>(null);
   selectedPlatform = signal<number | null>(null);
@@ -288,7 +290,22 @@ export class LibraryContainer {
   selectedIds = signal<Set<number>>(new Set());
   private lastSelectedIndex: number | null = null;
 
-  platforms = this.platformsService.platforms;
+  // Use client libs
+  platforms = injectPlatforms();
+
+  gamesQuery = injectGamesQuery(() => ({
+    status: this.selectedStatus() ?? undefined,
+    platform: this.selectedPlatform() ?? undefined,
+    search: this.searchQuery() || undefined,
+    sortBy: this.sortBy(),
+    sortOrder: this.sortOrder(),
+    page: this.currentPage(),
+    limit: this.perPage(),
+  }));
+
+  bulkUpdateMutation = injectBulkUpdateGamesMutation({
+    onSuccess: () => this.exitSelectMode(),
+  });
 
   readonly statusLabels = GAME_STATUS_LABELS;
   readonly statusColors = GAME_STATUS_COLORS;
@@ -296,86 +313,7 @@ export class LibraryContainer {
   readonly statusPriority: GameStatus[] = ['playing', 'up_next', 'backlog', 'on_hold', 'wishlist', 'completed', 'dropped'];
 
   Math = Math;
-
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
-
-  // Query for games with reactive filters
-  gamesQuery = injectQuery(() => ({
-    queryKey: ['games', {
-      status: this.selectedStatus(),
-      platform: this.selectedPlatform(),
-      search: this.searchQuery(),
-      sortBy: this.sortBy(),
-      sortOrder: this.sortOrder(),
-      page: this.currentPage(),
-      limit: this.perPage(),
-    }],
-    queryFn: async () => {
-      const limit = this.perPage();
-
-      // Handle "All" option - fetch all pages
-      if (limit === 0) {
-        return this.fetchAllGames();
-      }
-
-      const filters: GameFilterParams = {
-        sortBy: this.sortBy(),
-        sortOrder: this.sortOrder(),
-        limit,
-        page: this.currentPage(),
-      };
-
-      if (this.selectedStatus()) filters.status = this.selectedStatus()!;
-      if (this.selectedPlatform()) filters.platform = this.selectedPlatform()!;
-      if (this.searchQuery()) filters.search = this.searchQuery();
-
-      const response = await lastValueFrom(this.gamesService.getGames(filters));
-      return {
-        games: response.data || [],
-        total: response.meta?.total || response.data?.length || 0,
-        totalPages: response.meta?.totalPages || 1,
-      };
-    },
-  }));
-
-  // Mutation for bulk updates
-  bulkUpdateMutation = injectMutation(() => ({
-    mutationFn: async ({ ids, updates }: { ids: number[]; updates: { status: GameStatus } }) => {
-      return lastValueFrom(this.gamesService.bulkUpdateGames(ids, updates));
-    },
-    onSuccess: () => {
-      this.queryClient.invalidateQueries({ queryKey: ['games'] });
-      this.exitSelectMode();
-    },
-  }));
-
-  private async fetchAllGames(): Promise<{ games: UserGame[]; total: number; totalPages: number }> {
-    const allGames: UserGame[] = [];
-    let page = 1;
-    let totalPages = 1;
-    let total = 0;
-
-    do {
-      const filters: GameFilterParams = {
-        sortBy: this.sortBy(),
-        sortOrder: this.sortOrder(),
-        limit: 100,
-        page,
-      };
-
-      if (this.selectedStatus()) filters.status = this.selectedStatus()!;
-      if (this.selectedPlatform()) filters.platform = this.selectedPlatform()!;
-      if (this.searchQuery()) filters.search = this.searchQuery();
-
-      const response = await lastValueFrom(this.gamesService.getGames(filters));
-      allGames.push(...(response.data || []));
-      totalPages = response.meta?.totalPages || 1;
-      total = response.meta?.total || allGames.length;
-      page++;
-    } while (page <= totalPages);
-
-    return { games: allGames, total, totalPages: 1 };
-  }
 
   // Computed values from query
   games = computed(() => this.gamesQuery.data()?.games || []);
@@ -437,9 +375,7 @@ export class LibraryContainer {
     return Array.from(groups.values());
   });
 
-  constructor() {
-    this.platformsService.loadPlatforms();
-  }
+  // No constructor needed - platforms are loaded via TanStack Query automatically
 
   // Filter methods - just update signals, query auto-refetches
   setStatus(status: GameStatus | null) {

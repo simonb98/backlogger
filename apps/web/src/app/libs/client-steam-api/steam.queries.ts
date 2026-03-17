@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { injectQuery, injectMutation, injectQueryClient } from '@tanstack/angular-query-experimental';
+import { injectMutation, injectQuery, QueryClient } from '@tanstack/angular-query-experimental';
 import { lastValueFrom } from 'rxjs';
 import { SteamService } from '../../core/services/steam.service';
 import { GAMES_QUERY_KEY } from '../client-games-api';
@@ -24,7 +24,7 @@ export function injectSteamProfileQuery(getSteamId: () => string | null) {
  */
 export function injectSteamImportMutation() {
   const steamService = inject(SteamService);
-  const queryClient = injectQueryClient();
+  const queryClient = inject(QueryClient);
 
   return injectMutation(() => ({
     mutationFn: (steamId: string) => lastValueFrom(steamService.importGames(steamId)),
@@ -34,7 +34,7 @@ export function injectSteamImportMutation() {
   }));
 }
 
-// Note: The streaming import (importGamesWithProgress) uses SSE and is better 
+// Note: The streaming import (importGamesWithProgress) uses SSE and is better
 // handled directly with the SteamService since it's not a traditional query/mutation pattern.
 // Components should use SteamService.importGamesWithProgress() directly for that.
 
