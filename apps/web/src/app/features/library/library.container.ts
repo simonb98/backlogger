@@ -98,12 +98,50 @@ interface GroupedGame {
               Clear filters
             </button>
           }
+
+          <span class="text-gray-300 mx-2">|</span>
+
+          <!-- Per Page -->
+          <span class="text-sm text-gray-500 mr-2">Show:</span>
+          <select [ngModel]="perPage()" (ngModelChange)="setPerPage($event)"
+                  class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none">
+            <option [ngValue]="20">20</option>
+            <option [ngValue]="50">50</option>
+            <option [ngValue]="100">100</option>
+            <option [ngValue]="0">All</option>
+          </select>
         </div>
       </div>
 
-      <!-- Results count -->
+      <!-- Results count & Pagination -->
       @if (!loading() && groupedGames().length > 0) {
-        <p class="text-sm text-gray-500 mb-4">{{ groupedGames().length }} games</p>
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-sm text-gray-500">
+            @if (perPage() === 0) {
+              {{ totalGames() }} games
+            } @else {
+              Showing {{ (currentPage() - 1) * perPage() + 1 }}-{{ Math.min(currentPage() * perPage(), totalGames()) }} of {{ totalGames() }} games
+            }
+          </p>
+
+          @if (totalPages() > 1) {
+            <div class="flex items-center gap-2">
+              <button
+                (click)="goToPage(currentPage() - 1)"
+                [disabled]="currentPage() === 1"
+                class="px-3 py-1 rounded border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                ← Prev
+              </button>
+              <span class="text-sm text-gray-600">Page {{ currentPage() }} of {{ totalPages() }}</span>
+              <button
+                (click)="goToPage(currentPage() + 1)"
+                [disabled]="currentPage() >= totalPages()"
+                class="px-3 py-1 rounded border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                Next →
+              </button>
+            </div>
+          }
+        </div>
       }
 
       @if (loading()) {
@@ -190,12 +228,22 @@ export class LibraryContainer implements OnInit {
   sortBy = signal<SortField>('date_added');
   sortOrder = signal<SortOrder>('desc');
 
+  // Pagination
+  perPage = signal(50);
+  currentPage = signal(1);
+  totalPages = computed(() => {
+    if (this.perPage() === 0) return 1;
+    return Math.ceil(this.totalGames() / this.perPage());
+  });
+
   platforms = this.platformsService.platforms;
 
   readonly statusLabels = GAME_STATUS_LABELS;
   readonly statusColors = GAME_STATUS_COLORS;
   readonly statuses: GameStatus[] = ['playing', 'up_next', 'backlog', 'completed', 'on_hold', 'dropped', 'wishlist'];
   readonly statusPriority: GameStatus[] = ['playing', 'up_next', 'backlog', 'on_hold', 'wishlist', 'completed', 'dropped'];
+
+  Math = Math; // For template access
 
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -258,10 +306,19 @@ export class LibraryContainer implements OnInit {
     this.loading.set(true);
     this.error.set(null);
 
+    const limit = this.perPage();
+
+    // If "All" is selected (0), load all pages recursively
+    if (limit === 0) {
+      this.loadAllGames();
+      return;
+    }
+
     const filters: GameFilterParams = {
       sortBy: this.sortBy(),
       sortOrder: this.sortOrder(),
-      limit: 100,
+      limit: limit,
+      page: this.currentPage(),
     };
 
     if (this.selectedStatus()) filters.status = this.selectedStatus()!;
@@ -281,25 +338,75 @@ export class LibraryContainer implements OnInit {
     });
   }
 
+  private loadAllGames(page = 1, accumulated: UserGame[] = []) {
+    const filters: GameFilterParams = {
+      sortBy: this.sortBy(),
+      sortOrder: this.sortOrder(),
+      limit: 100,
+      page: page,
+    };
+
+    if (this.selectedStatus()) filters.status = this.selectedStatus()!;
+    if (this.selectedPlatform()) filters.platform = this.selectedPlatform()!;
+    if (this.searchQuery()) filters.search = this.searchQuery();
+
+    this.gamesService.getGames(filters).subscribe({
+      next: (response) => {
+        const allSoFar = [...accumulated, ...(response.data || [])];
+        const totalPages = response.meta?.totalPages || 1;
+
+        if (page < totalPages) {
+          this.loadAllGames(page + 1, allSoFar);
+        } else {
+          this.games.set(allSoFar);
+          this.totalGames.set(response.meta?.total || allSoFar.length);
+          this.loading.set(false);
+        }
+      },
+      error: (err) => {
+        this.error.set('Failed to load games');
+        this.loading.set(false);
+      },
+    });
+  }
+
   setStatus(status: GameStatus | null) {
     this.selectedStatus.set(status);
+    this.currentPage.set(1);
     this.loadGames();
   }
 
   toggleSortOrder() {
     this.sortOrder.set(this.sortOrder() === 'asc' ? 'desc' : 'asc');
+    this.currentPage.set(1);
     this.loadGames();
   }
 
   debouncedSearch() {
     if (this.searchTimeout) clearTimeout(this.searchTimeout);
-    this.searchTimeout = setTimeout(() => this.loadGames(), 300);
+    this.searchTimeout = setTimeout(() => {
+      this.currentPage.set(1);
+      this.loadGames();
+    }, 300);
   }
 
   clearFilters() {
     this.selectedStatus.set(null);
     this.selectedPlatform.set(null);
     this.searchQuery.set('');
+    this.currentPage.set(1);
+    this.loadGames();
+  }
+
+  setPerPage(value: number) {
+    this.perPage.set(value);
+    this.currentPage.set(1);
+    this.loadGames();
+  }
+
+  goToPage(page: number) {
+    if (page < 1 || page > this.totalPages()) return;
+    this.currentPage.set(page);
     this.loadGames();
   }
 

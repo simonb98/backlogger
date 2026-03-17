@@ -71,7 +71,12 @@ import { UserGame, GameStatus, GAME_STATUS_LABELS, GAME_STATUS_COLORS } from '..
 
             <!-- Edit Form -->
             <section class="bg-white p-6 rounded-xl shadow-sm mb-6">
-              <h2 class="text-xl font-semibold mb-6">Your Progress</h2>
+              <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold">Your Progress</h2>
+                @if (saving()) {
+                  <span class="text-sm text-gray-400">Saving...</span>
+                }
+              </div>
 
               <!-- Status -->
               <div class="mb-6">
@@ -82,7 +87,7 @@ import { UserGame, GameStatus, GAME_STATUS_LABELS, GAME_STATUS_COLORS } from '..
                       class="px-4 py-2 rounded-full font-medium border-2 transition-all"
                       [class]="editedStatus() === status ? 'text-white border-transparent' : 'bg-white border-gray-200 hover:border-gray-300'"
                       [style.backgroundColor]="editedStatus() === status ? statusColors[status] : ''"
-                      (click)="editedStatus.set(status)">
+                      (click)="setStatus(status)">
                       {{ statusLabels[status] }}
                     </button>
                   }
@@ -110,6 +115,7 @@ import { UserGame, GameStatus, GAME_STATUS_LABELS, GAME_STATUS_COLORS } from '..
                 <label class="block font-medium text-gray-700 mb-2">Completion: {{ editedCompletionPercent() }}%</label>
                 <input type="range" min="0" max="100" [value]="editedCompletionPercent()"
                   (input)="editedCompletionPercent.set(+$any($event.target).value)"
+                  (change)="saveField('completionPercent', editedCompletionPercent())"
                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500" />
               </div>
 
@@ -123,6 +129,7 @@ import { UserGame, GameStatus, GAME_STATUS_LABELS, GAME_STATUS_COLORS } from '..
               <div class="mb-6">
                 <label class="block font-medium text-gray-700 mb-2">Notes</label>
                 <textarea [value]="editedNotes()" (input)="editedNotes.set($any($event.target).value)"
+                  (blur)="saveField('notes', editedNotes() || undefined)"
                   placeholder="Personal notes..." rows="3"
                   class="w-full p-3 border-2 border-gray-200 rounded-lg resize-y focus:outline-none focus:border-blue-500"></textarea>
               </div>
@@ -131,14 +138,10 @@ import { UserGame, GameStatus, GAME_STATUS_LABELS, GAME_STATUS_COLORS } from '..
               <div class="mb-6">
                 <label class="block font-medium text-gray-700 mb-2">Review</label>
                 <textarea [value]="editedReview()" (input)="editedReview.set($any($event.target).value)"
+                  (blur)="saveField('review', editedReview() || undefined)"
                   placeholder="Write your review..." rows="4"
                   class="w-full p-3 border-2 border-gray-200 rounded-lg resize-y focus:outline-none focus:border-blue-500"></textarea>
               </div>
-
-              <button class="w-full py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 disabled:opacity-50"
-                (click)="saveChanges()" [disabled]="saving()">
-                {{ saving() ? 'Saving...' : 'Save Changes' }}
-              </button>
             </section>
 
             <!-- Dates -->
@@ -226,18 +229,12 @@ export class GameDetailContainer implements OnInit {
     });
   }
 
-  saveChanges() {
+  saveField(field: string, value: any) {
     const game = this.userGame();
     if (!game) return;
 
     this.saving.set(true);
-    this.gamesService.updateGame(game.id, {
-      status: this.editedStatus(),
-      rating: this.editedRating(),
-      notes: this.editedNotes() || undefined,
-      review: this.editedReview() || undefined,
-      completionPercent: this.editedCompletionPercent(),
-    }).subscribe({
+    this.gamesService.updateGame(game.id, { [field]: value }).subscribe({
       next: (updated) => {
         this.userGame.set(updated);
         this.saving.set(false);
@@ -245,9 +242,13 @@ export class GameDetailContainer implements OnInit {
       error: (err) => {
         console.error('Save error:', err);
         this.saving.set(false);
-        alert('Failed to save changes');
       },
     });
+  }
+
+  setStatus(status: GameStatus) {
+    this.editedStatus.set(status);
+    this.saveField('status', status);
   }
 
   deleteGame() {
@@ -266,7 +267,9 @@ export class GameDetailContainer implements OnInit {
   }
 
   setRating(rating: number) {
-    this.editedRating.set(this.editedRating() === rating ? null : rating);
+    const newRating = this.editedRating() === rating ? null : rating;
+    this.editedRating.set(newRating);
+    this.saveField('rating', newRating);
   }
 
   formatPlaytime(mins: number): string {
