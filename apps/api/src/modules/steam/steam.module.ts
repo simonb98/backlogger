@@ -2,15 +2,16 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { Game, UserGame, Platform, User } from '../../database/entities';
+import { Game, UserGame, Platform, User, Achievement } from '../../database/entities';
 import { SteamService } from './steam.service';
 import { SteamImportService } from './steam-import.service';
+import { SteamAchievementService } from './steam-achievement.service';
 import { SteamController } from './steam.controller';
 import { IgdbModule } from '../igdb/igdb.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Game, UserGame, Platform, User]),
+    TypeOrmModule.forFeature([Game, UserGame, Platform, User, Achievement]),
     IgdbModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
@@ -21,8 +22,8 @@ import { IgdbModule } from '../igdb/igdb.module';
     }),
   ],
   controllers: [SteamController],
-  providers: [SteamService, SteamImportService],
-  exports: [SteamService],
+  providers: [SteamService, SteamImportService, SteamAchievementService],
+  exports: [SteamService, SteamAchievementService],
 })
 export class SteamModule {}
 

@@ -439,7 +439,7 @@ export class LibraryContainer implements OnDestroy {
         if (userGame.platform) {
           existing.platforms.push(userGame.platform);
         }
-        if (userGame.completionPercent === 100) {
+        if (userGame.status === 'completed') {
           existing.isFullyCompleted = true;
         }
         const currentPriority = this.statusPriority.indexOf(existing.primaryStatus);
@@ -455,7 +455,7 @@ export class LibraryContainer implements OnDestroy {
           highestRating: userGame.rating ?? null,
           primaryStatus: userGame.status,
           platforms: userGame.platform ? [userGame.platform] : [],
-          isFullyCompleted: userGame.completionPercent === 100,
+          isFullyCompleted: userGame.status === 'completed',
         });
       }
     }

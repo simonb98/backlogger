@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, UserGame } from '../../database/entities';
+import { User, UserGame, Achievement } from '../../database/entities';
 
 export interface ProfileStats {
   user: {
@@ -15,10 +15,11 @@ export interface ProfileStats {
   stats: {
     totalGames: number;
     totalPlaytimeHours: number;
+    averagePlaytimeHours: number;
     completedGames: number;
     playingGames: number;
     backlogGames: number;
-    averageRating: number | null;
+    unlockedAchievements: number;
     platformBreakdown: { platform: string; count: number }[];
     statusBreakdown: { status: string; count: number }[];
   };
@@ -39,6 +40,8 @@ export class ProfileService {
     private userRepository: Repository<User>,
     @InjectRepository(UserGame)
     private userGameRepository: Repository<UserGame>,
+    @InjectRepository(Achievement)
+    private achievementRepository: Repository<Achievement>,
   ) {}
 
   async getProfileStats(userId: number): Promise<ProfileStats> {
@@ -73,16 +76,6 @@ export class ProfileService {
       return acc;
     }, {} as Record<string, number>);
 
-    // Get average rating (excluding unrated)
-    const ratingResult = await this.userGameRepository
-      .createQueryBuilder('ug')
-      .select('AVG(ug.rating)', 'avg')
-      .where('ug.userId = :userId', { userId })
-      .andWhere('ug.rating IS NOT NULL')
-      .andWhere('ug.rating > 0')
-      .getRawOne();
-    const averageRating = ratingResult?.avg ? parseFloat(parseFloat(ratingResult.avg).toFixed(1)) : null;
-
     // Get platform breakdown
     const platformCounts = await this.userGameRepository
       .createQueryBuilder('ug')
@@ -93,6 +86,27 @@ export class ProfileService {
       .groupBy('platform.name')
       .orderBy('count', 'DESC')
       .getRawMany();
+
+    // Get unlocked achievements count
+    const userGameIds = await this.userGameRepository
+      .createQueryBuilder('ug')
+      .select('ug.id')
+      .where('ug.userId = :userId', { userId })
+      .getMany();
+
+    const gameIds = userGameIds.map(ug => ug.id);
+    let unlockedAchievements = 0;
+
+    if (gameIds.length > 0) {
+      const achievementStats = await this.achievementRepository
+        .createQueryBuilder('a')
+        .select('COUNT(*)', 'unlocked')
+        .where('a.userGameId IN (:...gameIds)', { gameIds })
+        .andWhere('a.achieved = true')
+        .getRawOne();
+
+      unlockedAchievements = parseInt(achievementStats?.unlocked || '0', 10);
+    }
 
     // Get 5 most recently played games (by playtime or date)
     const recentlyPlayed = await this.userGameRepository
@@ -117,10 +131,11 @@ export class ProfileService {
       stats: {
         totalGames,
         totalPlaytimeHours: Math.round(totalPlaytimeMins / 60),
+        averagePlaytimeHours: totalGames > 0 ? Math.round(totalPlaytimeMins / 60 / totalGames) : 0,
         completedGames: statusMap['completed'] || 0,
         playingGames: statusMap['playing'] || 0,
         backlogGames: statusMap['backlog'] || 0,
-        averageRating,
+        unlockedAchievements,
         platformBreakdown: platformCounts.map(p => ({
           platform: p.platform,
           count: parseInt(p.count, 10),

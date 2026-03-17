@@ -15,10 +15,11 @@ interface ProfileStats {
   stats: {
     totalGames: number;
     totalPlaytimeHours: number;
+    averagePlaytimeHours: number;
     completedGames: number;
     playingGames: number;
     backlogGames: number;
-    averageRating: number | null;
+    unlockedAchievements: number;
     platformBreakdown: { platform: string; count: number }[];
     statusBreakdown: { status: string; count: number }[];
   };
@@ -77,7 +78,7 @@ interface ProfileStats {
         </div>
 
         <!-- Stats Grid -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <div class="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-sm">
             <div class="text-4xl font-bold text-blue-500">{{ profile()!.stats.totalGames }}</div>
             <div class="text-gray-500 dark:text-gray-400 mt-1">Total Games</div>
@@ -87,14 +88,16 @@ interface ProfileStats {
             <div class="text-gray-500 dark:text-gray-400 mt-1">Hours Played</div>
           </div>
           <div class="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-sm">
+            <div class="text-4xl font-bold text-green-400">{{ profile()!.stats.averagePlaytimeHours | number:'1.0-0' }}</div>
+            <div class="text-gray-500 dark:text-gray-400 mt-1">Avg Playtime</div>
+          </div>
+          <div class="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-sm">
             <div class="text-4xl font-bold text-purple-500">{{ profile()!.stats.completedGames }}</div>
             <div class="text-gray-500 dark:text-gray-400 mt-1">Completed</div>
           </div>
           <div class="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-sm">
-            <div class="text-4xl font-bold text-yellow-500">
-              {{ profile()!.stats.averageRating ? (profile()!.stats.averageRating | number:'1.1-1') : '-' }}
-            </div>
-            <div class="text-gray-500 dark:text-gray-400 mt-1">Avg Rating</div>
+            <div class="text-4xl font-bold text-cyan-500">{{ profile()!.stats.unlockedAchievements | number }}</div>
+            <div class="text-gray-500 dark:text-gray-400 mt-1">Achievements</div>
           </div>
         </div>
 

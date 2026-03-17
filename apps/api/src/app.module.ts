@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { databaseConfig, igdbConfig, appConfig, steamConfig, authConfig } from './config';
-import { User, Game, Platform, UserGame, PlaySession, CustomTag } from './database/entities';
+import { User, Game, Platform, UserGame, PlaySession, CustomTag, Achievement } from './database/entities';
 import { AuthModule } from './modules/auth/auth.module';
 import { IgdbModule } from './modules/igdb/igdb.module';
 import { PlatformsModule } from './modules/platforms/platforms.module';
@@ -27,7 +27,7 @@ import { ProfileModule } from './modules/profile/profile.module';
         database: configService.get<string>('database.database'),
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
-        entities: [User, Game, Platform, UserGame, PlaySession, CustomTag],
+        entities: [User, Game, Platform, UserGame, PlaySession, CustomTag, Achievement],
         synchronize: true, // TODO: Use migrations in production
         logging: process.env.NODE_ENV === 'development',
       }),

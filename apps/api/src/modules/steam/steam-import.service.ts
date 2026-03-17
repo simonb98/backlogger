@@ -183,11 +183,20 @@ export class SteamImportService {
     });
 
     if (existing) {
+      let updated = false;
       // Update playtime if Steam has more
       if (steamGame.playtime_forever > existing.totalPlaytimeMins) {
         existing.totalPlaytimeMins = steamGame.playtime_forever;
+        updated = true;
+      }
+      // Update Steam app ID if not set
+      if (!existing.steamAppId) {
+        existing.steamAppId = steamGame.appid;
+        updated = true;
+      }
+      if (updated) {
         await this.userGameRepository.save(existing);
-        return { status: 'skipped', reason: 'Already in library (playtime updated)' };
+        return { status: 'skipped', reason: 'Already in library (updated)' };
       }
       return { status: 'skipped', reason: 'Already in library' };
     }
@@ -199,10 +208,43 @@ export class SteamImportService {
       platformId: platform.id,
       status: 'backlog',
       totalPlaytimeMins: steamGame.playtime_forever,
+      steamAppId: steamGame.appid,
     });
     await this.userGameRepository.save(userGame);
 
     return { status: 'imported' };
+  }
+
+  async backfillSteamAppIds(userId: number): Promise<{ updated: number; total: number }> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user?.steamId) {
+      throw new Error('User has no Steam ID linked');
+    }
+
+    // Get user's Steam games
+    const steamGames = await this.steamService.getOwnedGames(user.steamId);
+    const steamGameMap = new Map(steamGames.map(g => [g.name.toLowerCase(), g.appid]));
+
+    // Get user's library games without Steam App ID
+    const userGames = await this.userGameRepository.find({
+      where: { userId, steamAppId: undefined },
+      relations: ['game'],
+    });
+
+    let updated = 0;
+    for (const userGame of userGames) {
+      const gameName = userGame.game.name.toLowerCase();
+      const steamAppId = steamGameMap.get(gameName);
+
+      if (steamAppId) {
+        userGame.steamAppId = steamAppId;
+        await this.userGameRepository.save(userGame);
+        updated++;
+        this.logger.log(`Backfilled Steam App ID ${steamAppId} for "${userGame.game.name}"`);
+      }
+    }
+
+    return { updated, total: userGames.length };
   }
 
   private async linkSteamToUser(userId: number, steamId: string): Promise<void> {

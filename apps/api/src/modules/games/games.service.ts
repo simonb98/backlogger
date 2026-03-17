@@ -190,7 +190,6 @@ export class GamesService {
 
     if (dto.status !== undefined) updateData.status = dto.status;
     if (dto.rating !== undefined) updateData.rating = dto.rating;
-    if (dto.completionPercent !== undefined) updateData.completionPercent = dto.completionPercent;
     if (dto.notes !== undefined) updateData.notes = dto.notes;
     if (dto.skippedUntil !== undefined) {
       updateData.skippedUntil = dto.skippedUntil ? new Date(dto.skippedUntil) : null;

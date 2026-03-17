@@ -42,12 +42,12 @@ export interface UserGame {
   rating?: number;
   notes?: string;
   review?: string;
-  completionPercent: number;
   totalPlaytimeMins: number;
   dateAdded: string;
   dateStarted?: string;
   dateCompleted?: string;
   skippedUntil?: string;
+  steamAppId?: number;
   game?: Game;
   platform?: Platform;
   tags?: CustomTag[];

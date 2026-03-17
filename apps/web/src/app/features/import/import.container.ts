@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Component, computed, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -175,11 +176,42 @@ import {
           </button>
         </div>
       }
+
+      <!-- Sync Steam Achievements -->
+      @if (!importing()) {
+        <div class="mt-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+          <h3 class="font-medium dark:text-white mb-2">🏆 Sync Steam Achievements</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            Sync achievements for all your Steam games. Games with 100% achievements will be marked as completed.
+          </p>
+          <button
+            (click)="syncAllAchievements()"
+            [disabled]="syncing()"
+            class="px-4 py-2 bg-purple-500 text-white text-sm rounded-lg hover:bg-purple-600 disabled:opacity-50"
+          >
+            {{ syncing() ? 'Syncing achievements...' : '🔄 Sync All Achievements' }}
+          </button>
+          @if (syncResult()) {
+            <p class="mt-2 text-sm text-green-600 dark:text-green-400">
+              ✓ Synced {{ syncResult()!.synced }} games, {{ syncResult()!.completed }} auto-completed
+              @if (syncResult()!.failed > 0) {
+                <span class="text-yellow-600 dark:text-yellow-400">({{ syncResult()!.failed }} failed)</span>
+              }
+            </p>
+          }
+          @if (syncError()) {
+            <p class="mt-2 text-sm text-red-600 dark:text-red-400">
+              ✗ {{ syncError() }}
+            </p>
+          }
+        </div>
+      }
     </div>
   `,
 })
 export class ImportContainer {
   private router = inject(Router);
+  private http = inject(HttpClient);
 
   // Use client libs
   profileMutation = injectSteamProfileMutation();
@@ -190,6 +222,11 @@ export class ImportContainer {
   error = signal<string | null>(null);
   importResult = signal<ImportResult | null>(null);
   progress = signal<ImportProgress | null>(null);
+
+  // Sync state
+  syncing = signal(false);
+  syncResult = signal<{ synced: number; failed: number; completed: number } | null>(null);
+  syncError = signal<string | null>(null);
 
   // Derived state from mutation
   loading = computed(() => this.profileMutation.isPending());
@@ -271,5 +308,32 @@ export class ImportContainer {
 
   goToLibrary() {
     this.router.navigate(['/library']);
+  }
+
+  syncAllAchievements() {
+    this.syncing.set(true);
+    this.syncResult.set(null);
+    this.syncError.set(null);
+
+    // First backfill Steam App IDs, then sync achievements
+    this.http.post<{ data: { updated: number; total: number } }>('/api/v1/steam/backfill-app-ids', {}).subscribe({
+      next: () => {
+        // Now sync all achievements
+        this.http.post<{ data: { synced: number; failed: number; completed: number } }>('/api/v1/steam/achievements/sync-all', {}).subscribe({
+          next: (res) => {
+            this.syncResult.set(res.data);
+            this.syncing.set(false);
+          },
+          error: (err) => {
+            this.syncError.set(err?.error?.error?.message || 'Failed to sync achievements');
+            this.syncing.set(false);
+          },
+        });
+      },
+      error: (err) => {
+        this.syncError.set(err?.error?.error?.message || 'Failed to backfill Steam App IDs');
+        this.syncing.set(false);
+      },
+    });
   }
 }

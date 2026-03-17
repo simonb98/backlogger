@@ -45,7 +45,6 @@ export interface UpdateGameDto {
   rating?: number | null;
   notes?: string;
   review?: string;
-  completionPercent?: number;
   dateStarted?: string;
   dateCompleted?: string;
   platformId?: number;

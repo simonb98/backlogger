@@ -1,9 +1,10 @@
-import { Controller, Post, Get, Body, Query, Res, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, Query, Res, UseGuards, Param, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { SteamService } from './steam.service';
 import { SteamImportService, ImportResult } from './steam-import.service';
+import { SteamAchievementService } from './steam-achievement.service';
 import { SteamImportDto } from './dto/steam-import.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser, CurrentUserPayload } from '../auth/decorators/current-user.decorator';
@@ -15,6 +16,7 @@ export class SteamController {
   constructor(
     private readonly steamService: SteamService,
     private readonly steamImportService: SteamImportService,
+    private readonly steamAchievementService: SteamAchievementService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -92,6 +94,49 @@ export class SteamController {
     }
 
     res.end();
+  }
+
+  @Get('achievements/:userGameId')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get achievements for a game' })
+  async getAchievements(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('userGameId', ParseIntPipe) userGameId: number,
+  ) {
+    return this.steamAchievementService.getAchievements(userGameId, user.id);
+  }
+
+  @Post('achievements/:userGameId/sync')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Sync achievements from Steam' })
+  async syncAchievements(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('userGameId', ParseIntPipe) userGameId: number,
+  ) {
+    return this.steamAchievementService.syncAchievements(userGameId, user.id);
+  }
+
+  @Get('achievements/:userGameId/stats')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get achievement stats for a game' })
+  async getAchievementStats(
+    @Param('userGameId', ParseIntPipe) userGameId: number,
+  ) {
+    return this.steamAchievementService.getAchievementStats(userGameId);
+  }
+
+  @Post('backfill-app-ids')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Backfill Steam App IDs for existing games' })
+  async backfillAppIds(@CurrentUser() user: CurrentUserPayload) {
+    return this.steamImportService.backfillSteamAppIds(user.id);
+  }
+
+  @Post('achievements/sync-all')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Sync achievements for all Steam games' })
+  async syncAllAchievements(@CurrentUser() user: CurrentUserPayload) {
+    return this.steamAchievementService.syncAllAchievements(user.id);
   }
 }
 

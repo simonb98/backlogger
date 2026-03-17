@@ -17,6 +17,29 @@ export interface SteamProfile {
   profileurl: string;
 }
 
+export interface SteamAchievement {
+  apiname: string;
+  achieved: number;
+  unlocktime: number;
+  name?: string;
+  description?: string;
+}
+
+export interface SteamAchievementSchema {
+  name: string;
+  defaultvalue: number;
+  displayName: string;
+  hidden: number;
+  description: string;
+  icon: string;
+  icongray: string;
+}
+
+export interface SteamGlobalAchievement {
+  name: string;
+  percent: number;
+}
+
 @Injectable()
 export class SteamService {
   private readonly logger = new Logger(SteamService.name);
@@ -112,6 +135,86 @@ export class SteamService {
     }
 
     return this.resolveVanityUrl(extracted.value);
+  }
+
+  async getPlayerAchievements(steamId: string, appId: number): Promise<SteamAchievement[]> {
+    try {
+      const response = await axios.get(
+        `${this.apiUrl}/ISteamUserStats/GetPlayerAchievements/v1/`,
+        { params: { key: this.apiKey, steamid: steamId, appid: appId } }
+      );
+
+      if (!response.data.playerstats?.success) {
+        return [];
+      }
+
+      return response.data.playerstats.achievements || [];
+    } catch (error) {
+      this.logger.debug(`No achievements for app ${appId}: ${error.message}`);
+      return [];
+    }
+  }
+
+  async getAchievementSchema(appId: number): Promise<SteamAchievementSchema[]> {
+    try {
+      const response = await axios.get(
+        `${this.apiUrl}/ISteamUserStats/GetSchemaForGame/v2/`,
+        { params: { key: this.apiKey, appid: appId } }
+      );
+
+      return response.data.game?.availableGameStats?.achievements || [];
+    } catch (error) {
+      this.logger.debug(`No achievement schema for app ${appId}: ${error.message}`);
+      return [];
+    }
+  }
+
+  async getGlobalAchievementPercentages(appId: number): Promise<Map<string, number>> {
+    try {
+      const response = await axios.get(
+        `${this.apiUrl}/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/`,
+        { params: { gameid: appId } }
+      );
+
+      const achievements = response.data.achievementpercentages?.achievements || [];
+      const map = new Map<string, number>();
+      for (const a of achievements) {
+        map.set(a.name, a.percent);
+      }
+      return map;
+    } catch (error) {
+      this.logger.debug(`No global percentages for app ${appId}: ${error.message}`);
+      return new Map();
+    }
+  }
+
+  async getFullAchievements(steamId: string, appId: number) {
+    const [playerAchievements, schema, globalPercentages] = await Promise.all([
+      this.getPlayerAchievements(steamId, appId),
+      this.getAchievementSchema(appId),
+      this.getGlobalAchievementPercentages(appId),
+    ]);
+
+    if (schema.length === 0) {
+      return [];
+    }
+
+    const schemaMap = new Map(schema.map(s => [s.name, s]));
+    const playerMap = new Map(playerAchievements.map(a => [a.apiname, a]));
+
+    return schema.map(s => {
+      const player = playerMap.get(s.name);
+      return {
+        apiName: s.name,
+        name: s.displayName,
+        description: s.description,
+        iconUrl: s.icon,
+        iconGrayUrl: s.icongray,
+        achieved: player?.achieved === 1,
+        unlockTime: player?.unlocktime ? new Date(player.unlocktime * 1000) : null,
+        globalPercent: globalPercentages.get(s.name) || null,
+      };
+    });
   }
 }
 

@@ -17,6 +17,7 @@ import { Game } from './game.entity';
 import { Platform } from './platform.entity';
 import { PlaySession } from './play-session.entity';
 import { CustomTag } from './custom-tag.entity';
+import { Achievement } from './achievement.entity';
 
 export type GameStatus = 'backlog' | 'up_next' | 'playing' | 'completed' | 'dropped' | 'wishlist' | 'on_hold';
 
@@ -64,11 +65,11 @@ export class UserGame {
   @Column({ type: 'text', nullable: true })
   review?: string;
 
-  @Column({ name: 'completion_percent', type: 'smallint', default: 0 })
-  completionPercent: number;
-
   @Column({ name: 'total_playtime_mins', default: 0 })
   totalPlaytimeMins: number;
+
+  @Column({ name: 'steam_app_id', nullable: true })
+  steamAppId?: number;
 
   @Column({ name: 'date_added', type: 'timestamp', default: () => 'NOW()' })
   dateAdded: Date;
@@ -98,5 +99,8 @@ export class UserGame {
     inverseJoinColumn: { name: 'tag_id', referencedColumnName: 'id' },
   })
   tags: CustomTag[];
+
+  @OneToMany(() => Achievement, (achievement) => achievement.userGame)
+  achievements: Achievement[];
 }
 

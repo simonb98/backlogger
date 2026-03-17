@@ -28,13 +28,6 @@ export class UpdateGameDto {
   @IsString()
   review?: string;
 
-  @ApiPropertyOptional({ description: 'Completion percentage (0-100)' })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Max(100)
-  completionPercent?: number;
-
   @ApiPropertyOptional({ description: 'Date started playing' })
   @IsOptional()
   @IsDateString()

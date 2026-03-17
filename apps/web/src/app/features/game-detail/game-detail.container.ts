@@ -10,11 +10,11 @@ import {
   injectGameQuery,
   injectUpdateGameMutation,
 } from '../../libs/client-games-api';
-import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/components';
+import { ScreenshotCarouselComponent, StarRatingComponent, AchievementsComponent } from '../../shared/components';
 
 @Component({
   selector: 'app-game-detail-container',
-  imports: [CommonModule, FormsModule, StarRatingComponent, ScreenshotCarouselComponent],
+  imports: [CommonModule, FormsModule, StarRatingComponent, ScreenshotCarouselComponent, AchievementsComponent],
   template: `
     <div class="max-w-6xl mx-auto p-6">
       @if (loading()) {
@@ -131,22 +131,6 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
                   (ratingChange)="setRating($event)" />
               </div>
 
-              <!-- Completion -->
-              <div class="mb-6">
-                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-2"
-                  >Completion: {{ editedCompletionPercent() }}%</label
-                >
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  [value]="editedCompletionPercent()"
-                  (input)="editedCompletionPercent.set(+$any($event.target).value)"
-                  (change)="saveField('completionPercent', editedCompletionPercent())"
-                  class="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                />
-              </div>
-
               <!-- Playtime -->
               <div class="flex justify-between items-center mb-6">
                 <label class="font-medium text-gray-700 dark:text-gray-300">Total Playtime</label>
@@ -183,7 +167,7 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
             </section>
 
             <!-- Dates -->
-            <div class="flex gap-8 flex-wrap text-center">
+            <div class="flex gap-8 flex-wrap text-center mb-6">
               <div>
                 <span class="block text-sm text-gray-500 dark:text-gray-400">Added</span
                 ><span class="font-semibold dark:text-white">{{ formatDate(game.dateAdded) }}</span>
@@ -197,6 +181,14 @@ import { ScreenshotCarouselComponent, StarRatingComponent } from '../../shared/c
                 ><span class="font-semibold dark:text-white">{{ formatDate(game.dateCompleted) }}</span>
               </div>
             </div>
+
+            <!-- Achievements -->
+            @if (game.steamAppId) {
+              <app-achievements
+                [userGameId]="game.id"
+                [steamAppId]="game.steamAppId"
+              />
+            }
           </main>
         </div>
       }
@@ -264,7 +256,6 @@ export class GameDetailContainer {
   editedRating = signal<number | null>(null);
   editedNotes = signal('');
   editedReview = signal('');
-  editedCompletionPercent = signal(0);
 
   // UI state
   showDeleteConfirm = signal(false);
@@ -295,7 +286,6 @@ export class GameDetailContainer {
         this.editedRating.set(game.rating ?? null);
         this.editedNotes.set(game.notes ?? '');
         this.editedReview.set(game.review ?? '');
-        this.editedCompletionPercent.set(game.completionPercent);
       }
     });
   }
