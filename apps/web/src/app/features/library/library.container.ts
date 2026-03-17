@@ -24,27 +24,6 @@ interface GroupedGame {
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="max-w-7xl mx-auto p-6">
-      <!-- Bulk Edit Bar -->
-      @if (selectedIds().size > 0) {
-        <div class="fixed top-0 left-0 right-0 bg-blue-600 text-white py-3 px-6 shadow-lg z-50 flex items-center justify-between">
-          <div class="flex items-center gap-4">
-            <button (click)="clearSelection()" class="hover:bg-blue-700 p-1 rounded">✕</button>
-            <span class="font-medium">{{ selectedIds().size }} game(s) selected</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-blue-200 mr-2">Set status:</span>
-            @for (status of statuses; track status) {
-              <button
-                (click)="bulkSetStatus(status)"
-                class="px-3 py-1.5 rounded text-sm font-medium transition-colors hover:opacity-90"
-                [style.backgroundColor]="statusColors[status]">
-                {{ statusLabels[status] }}
-              </button>
-            }
-          </div>
-        </div>
-      }
-
       <header class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold">My Library</h1>
         <div class="flex gap-2">
@@ -146,6 +125,27 @@ interface GroupedGame {
         </div>
       </div>
 
+      <!-- Bulk Edit Bar -->
+      @if (selectedIds().size > 0) {
+        <div class="bg-blue-600 text-white py-3 px-6 rounded-xl shadow-sm mb-4 flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <button (click)="clearSelection()" class="hover:bg-blue-700 p-1 rounded">✕</button>
+            <span class="font-medium">{{ selectedIds().size }} game(s) selected</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-blue-200 mr-2">Set status:</span>
+            @for (status of statuses; track status) {
+              <button
+                (click)="bulkSetStatus(status)"
+                class="px-3 py-1.5 rounded text-sm font-medium transition-colors hover:opacity-90"
+                [style.backgroundColor]="statusColors[status]">
+                {{ statusLabels[status] }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
       <!-- Results count & Pagination -->
       @if (!loading() && groupedGames().length > 0) {
         <div class="flex items-center justify-between mb-4">
@@ -202,11 +202,13 @@ interface GroupedGame {
         </div>
       }
 
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
+           [class.select-none]="selectMode()">
         @for (grouped of groupedGames(); track grouped.game.id; let idx = $index) {
           <div class="relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
                [class.ring-2]="isSelected(grouped.entries[0].id)"
                [class.ring-blue-500]="isSelected(grouped.entries[0].id)"
+               [class.cursor-pointer]="selectMode()"
                (click)="selectMode() ? handleSelect($event, grouped.entries[0].id, idx) : null">
 
             @if (selectMode()) {
@@ -483,6 +485,9 @@ export class LibraryContainer implements OnInit {
   }
 
   handleSelect(event: MouseEvent, id: number, index: number) {
+    // Prevent text selection on shift-click
+    event.preventDefault();
+
     const games = this.groupedGames();
     const current = new Set(this.selectedIds());
 
