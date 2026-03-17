@@ -98,7 +98,7 @@ export class IgdbService implements OnModuleInit {
     const body = `
       search "${query}";
       fields name, slug, summary, cover.image_id, first_release_date,
-             genres.name, platforms.name, platforms.abbreviation,
+             genres.name, platforms.id, platforms.name, platforms.abbreviation,
              total_rating, total_rating_count;
       limit ${limit};
     `;

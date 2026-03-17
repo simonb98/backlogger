@@ -33,7 +33,7 @@ export class IgdbSearchResultDto {
   releaseYear?: number;
 
   @ApiPropertyOptional()
-  platforms?: string[];
+  platforms?: { id: number; name: string; abbreviation?: string }[];
 
   @ApiPropertyOptional()
   rating?: number;

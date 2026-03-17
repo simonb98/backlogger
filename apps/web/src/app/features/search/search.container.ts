@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -51,7 +51,7 @@ import { IgdbSearchResult } from '../../core/models';
                 <span class="text-sm text-gray-500">{{ game.releaseYear }}</span>
               }
               @if (game.platforms?.length) {
-                <div class="text-xs text-gray-400 mt-1">{{ game.platforms?.join(', ') }}</div>
+                <div class="text-xs text-gray-400 mt-1">{{ getPlatformNames(game) }}</div>
               }
               @if (game.rating) {
                 <div class="text-sm mt-2">⭐ {{ game.rating | number:'1.0-0' }}</div>
@@ -92,7 +92,7 @@ import { IgdbSearchResult } from '../../core/models';
             (change)="selectedPlatformId.set(+$any($event.target).value)"
             class="w-full p-3 border-2 border-gray-200 rounded-lg mb-6">
             <option value="" disabled>Choose a platform...</option>
-            @for (platform of platforms(); track platform.id) {
+            @for (platform of availablePlatforms(); track platform.id) {
               <option [value]="platform.id">{{ platform.name }}</option>
             }
           </select>
@@ -135,6 +135,16 @@ export class SearchContainer implements OnInit {
 
   platforms = this.platformsService.platforms;
 
+  // Filter platforms to only show ones available for the selected game
+  availablePlatforms = computed(() => {
+    const game = this.selectedGame();
+    const allPlatforms = this.platforms();
+    if (!game?.platforms?.length) return allPlatforms;
+
+    const gamePlatformIds = new Set(game.platforms.map(p => p.id));
+    return allPlatforms.filter(p => p.igdbId && gamePlatformIds.has(p.igdbId));
+  });
+
   private searchSubject = new Subject<string>();
 
   ngOnInit() {
@@ -167,15 +177,44 @@ export class SearchContainer implements OnInit {
     this.searchSubject.next(query);
   }
 
+  getPlatformNames(game: IgdbSearchResult): string {
+    return game.platforms?.map(p => p.abbreviation || p.name).join(', ') || '';
+  }
+
   openAddDialog(game: IgdbSearchResult, status: 'backlog' | 'wishlist') {
-    this.selectedGame.set(game);
-    this.selectedPlatformId.set(null);
-    this.addStatus.set(status);
+    // Check if game has only one platform that we support
+    const allPlatforms = this.platforms();
+    const gamePlatformIds = new Set(game.platforms?.map(p => p.id) || []);
+    const matchingPlatforms = allPlatforms.filter(p => p.igdbId && gamePlatformIds.has(p.igdbId));
+
+    if (matchingPlatforms.length === 1) {
+      // Auto-add with the single platform
+      this.addGameDirectly(game, matchingPlatforms[0].id, status);
+    } else {
+      // Show dialog to select platform
+      this.selectedGame.set(game);
+      this.selectedPlatformId.set(null);
+      this.addStatus.set(status);
+    }
   }
 
   closeAddDialog() {
     this.selectedGame.set(null);
     this.selectedPlatformId.set(null);
+  }
+
+  private addGameDirectly(game: IgdbSearchResult, platformId: number, status: 'backlog' | 'wishlist') {
+    this.adding.set(true);
+    this.gamesService.addGame({ igdbId: game.id, platformId, status }).subscribe({
+      next: () => {
+        this.adding.set(false);
+        this.router.navigate(['/library']);
+      },
+      error: (err) => {
+        this.adding.set(false);
+        alert(err.error?.error?.message || 'Failed to add game');
+      }
+    });
   }
 
   addGame() {

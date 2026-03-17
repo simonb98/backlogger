@@ -37,7 +37,11 @@ export class IgdbController {
       releaseYear: game.first_release_date
         ? new Date(game.first_release_date * 1000).getFullYear()
         : undefined,
-      platforms: game.platforms?.map((p) => p.abbreviation || p.name),
+      platforms: game.platforms?.map((p) => ({
+        id: p.id,
+        name: p.name,
+        abbreviation: p.abbreviation,
+      })),
       rating: game.total_rating ? Math.round(game.total_rating) : undefined,
     };
   }

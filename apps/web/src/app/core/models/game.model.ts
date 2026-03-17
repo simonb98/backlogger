@@ -61,13 +61,19 @@ export interface PlaySession {
   notes?: string;
 }
 
+export interface IgdbPlatformInfo {
+  id: number;
+  name: string;
+  abbreviation?: string;
+}
+
 export interface IgdbSearchResult {
   id: number;
   name: string;
   slug?: string;
   coverUrl?: string;
   releaseYear?: number;
-  platforms?: string[];
+  platforms?: IgdbPlatformInfo[];
   rating?: number;
 }
 
