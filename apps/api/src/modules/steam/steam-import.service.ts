@@ -38,11 +38,12 @@ export class SteamImportService {
     @InjectRepository(Platform) private platformRepository: Repository<Platform>,
   ) {}
 
-  async importFromSteam(steamInput: string): Promise<ImportResult> {
-    return this.importFromSteamWithProgress(steamInput);
+  async importFromSteam(userId: number, steamInput: string): Promise<ImportResult> {
+    return this.importFromSteamWithProgress(userId, steamInput);
   }
 
   async importFromSteamWithProgress(
+    userId: number,
     steamInput: string,
     onProgress?: (progress: ImportProgress) => void,
   ): Promise<ImportResult> {
@@ -73,7 +74,7 @@ export class SteamImportService {
       });
 
       try {
-        const importStatus = await this.importSingleGame(steamGame, pcPlatform);
+        const importStatus = await this.importSingleGame(userId, steamGame, pcPlatform);
         result.games.push({ name: steamGame.name, ...importStatus });
 
         if (importStatus.status === 'imported') result.imported++;
@@ -123,6 +124,7 @@ export class SteamImportService {
   }
 
   private async importSingleGame(
+    userId: number,
     steamGame: SteamGame,
     platform: Platform,
   ): Promise<{ status: 'imported' | 'skipped' | 'failed'; reason?: string }> {
@@ -171,9 +173,9 @@ export class SteamImportService {
       game = await this.gameRepository.save(game);
     }
 
-    // Check if already in library
+    // Check if already in library for this user
     const existing = await this.userGameRepository.findOne({
-      where: { gameId: game.id, platformId: platform.id },
+      where: { userId, gameId: game.id, platformId: platform.id },
     });
 
     if (existing) {
@@ -188,6 +190,7 @@ export class SteamImportService {
 
     // Create user game entry
     const userGame = this.userGameRepository.create({
+      userId,
       gameId: game.id,
       platformId: platform.id,
       status: 'backlog',

@@ -1,11 +1,15 @@
-import { Controller, Post, Get, Body, Query, Res } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Post, Get, Body, Query, Res, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { SteamService } from './steam.service';
 import { SteamImportService, ImportResult } from './steam-import.service';
 import { SteamImportDto } from './dto/steam-import.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser, CurrentUserPayload } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Steam')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('steam')
 export class SteamController {
   constructor(
@@ -37,13 +41,17 @@ export class SteamController {
   @Post('import')
   @ApiOperation({ summary: 'Import games from Steam library' })
   @ApiResponse({ status: 201, description: 'Import completed' })
-  async importGames(@Body() dto: SteamImportDto): Promise<ImportResult> {
-    return this.steamImportService.importFromSteam(dto.steamId);
+  async importGames(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() dto: SteamImportDto,
+  ): Promise<ImportResult> {
+    return this.steamImportService.importFromSteam(user.id, dto.steamId);
   }
 
   @Get('import-stream')
   @ApiOperation({ summary: 'Import games from Steam with SSE progress updates' })
   async importGamesStream(
+    @CurrentUser() user: CurrentUserPayload,
     @Query('steamId') steamId: string,
     @Res() res: Response,
   ) {
@@ -59,6 +67,7 @@ export class SteamController {
 
     try {
       await this.steamImportService.importFromSteamWithProgress(
+        user.id,
         steamId,
         (progress) => sendEvent('progress', progress),
       );

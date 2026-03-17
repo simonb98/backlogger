@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Game, UserGame } from '../../database/entities';
@@ -15,12 +15,13 @@ export class GamesService {
     private igdbService: IgdbService,
   ) {}
 
-  async findAll(filters: GameFilterDto) {
+  async findAll(userId: number, filters: GameFilterDto) {
     const query = this.userGameRepository
       .createQueryBuilder('ug')
       .leftJoinAndSelect('ug.game', 'game')
       .leftJoinAndSelect('ug.platform', 'platform')
-      .leftJoinAndSelect('ug.tags', 'tags');
+      .leftJoinAndSelect('ug.tags', 'tags')
+      .where('ug.userId = :userId', { userId });
 
     // Apply filters
     if (filters.status) {
@@ -77,7 +78,7 @@ export class GamesService {
     };
   }
 
-  async findOne(id: number): Promise<UserGame> {
+  async findOne(userId: number, id: number): Promise<UserGame> {
     const userGame = await this.userGameRepository.findOne({
       where: { id },
       relations: ['game', 'platform', 'tags', 'sessions'],
@@ -87,10 +88,15 @@ export class GamesService {
       throw new NotFoundException('Game not found in library');
     }
 
+    // Verify ownership
+    if (userGame.userId !== userId) {
+      throw new ForbiddenException('Not authorized to access this game');
+    }
+
     return userGame;
   }
 
-  async create(dto: CreateGameDto): Promise<UserGame> {
+  async create(userId: number, dto: CreateGameDto): Promise<UserGame> {
     // Get or create the game from IGDB
     let game = await this.gameRepository.findOne({ where: { igdbId: dto.igdbId } });
 
@@ -124,9 +130,9 @@ export class GamesService {
       game = await this.gameRepository.save(game);
     }
 
-    // Check if already in library for this platform
+    // Check if already in library for this user/platform
     const existing = await this.userGameRepository.findOne({
-      where: { gameId: game.id, platformId: dto.platformId },
+      where: { userId, gameId: game.id, platformId: dto.platformId },
     });
 
     if (existing) {
@@ -135,6 +141,7 @@ export class GamesService {
 
     // Create user game entry
     const userGame = this.userGameRepository.create({
+      userId,
       gameId: game.id,
       platformId: dto.platformId,
       status: dto.status || 'backlog',
@@ -144,11 +151,11 @@ export class GamesService {
     });
 
     const saved = await this.userGameRepository.save(userGame);
-    return this.findOne(saved.id);
+    return this.findOne(userId, saved.id);
   }
 
-  async update(id: number, dto: UpdateGameDto): Promise<UserGame> {
-    const userGame = await this.findOne(id);
+  async update(userId: number, id: number, dto: UpdateGameDto): Promise<UserGame> {
+    const userGame = await this.findOne(userId, id);
 
     // Handle status change side effects
     if (dto.status && dto.status !== userGame.status) {
@@ -170,15 +177,15 @@ export class GamesService {
     });
 
     await this.userGameRepository.save(userGame);
-    return this.findOne(id);
+    return this.findOne(userId, id);
   }
 
-  async remove(id: number): Promise<void> {
-    const userGame = await this.findOne(id);
+  async remove(userId: number, id: number): Promise<void> {
+    const userGame = await this.findOne(userId, id);
     await this.userGameRepository.remove(userGame);
   }
 
-  async bulkUpdate(ids: number[], dto: UpdateGameDto): Promise<{ updated: number }> {
+  async bulkUpdate(userId: number, ids: number[], dto: UpdateGameDto): Promise<{ updated: number }> {
     const updateData: Record<string, any> = {};
 
     if (dto.status !== undefined) updateData.status = dto.status;
@@ -189,11 +196,13 @@ export class GamesService {
       updateData.skippedUntil = dto.skippedUntil ? new Date(dto.skippedUntil) : null;
     }
 
+    // Only update games owned by this user
     const result = await this.userGameRepository
       .createQueryBuilder()
       .update()
       .set(updateData)
-      .whereInIds(ids)
+      .where('id IN (:...ids)', { ids })
+      .andWhere('userId = :userId', { userId })
       .execute();
 
     return { updated: result.affected || 0 };

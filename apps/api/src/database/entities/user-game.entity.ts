@@ -12,6 +12,7 @@ import {
   Index,
   Unique,
 } from 'typeorm';
+import { User } from './user.entity';
 import { Game } from './game.entity';
 import { Platform } from './platform.entity';
 import { PlaySession } from './play-session.entity';
@@ -20,10 +21,18 @@ import { CustomTag } from './custom-tag.entity';
 export type GameStatus = 'backlog' | 'up_next' | 'playing' | 'completed' | 'dropped' | 'wishlist' | 'on_hold';
 
 @Entity('user_games')
-@Unique(['game', 'platform'])
+@Unique(['user', 'game', 'platform'])
 export class UserGame {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Index()
+  @ManyToOne(() => User, (user) => user.userGames, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+
+  @Column({ name: 'user_id' })
+  userId: number;
 
   @Index()
   @ManyToOne(() => Game, (game) => game.userGames, { onDelete: 'CASCADE' })

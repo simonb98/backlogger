@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { databaseConfig, igdbConfig, appConfig, steamConfig } from './config';
-import { Game, Platform, UserGame, PlaySession, CustomTag } from './database/entities';
+import { databaseConfig, igdbConfig, appConfig, steamConfig, authConfig } from './config';
+import { User, Game, Platform, UserGame, PlaySession, CustomTag } from './database/entities';
+import { AuthModule } from './modules/auth/auth.module';
 import { IgdbModule } from './modules/igdb/igdb.module';
 import { PlatformsModule } from './modules/platforms/platforms.module';
 import { GamesModule } from './modules/games/games.module';
@@ -12,7 +13,7 @@ import { SteamModule } from './modules/steam/steam.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, igdbConfig, appConfig, steamConfig],
+      load: [databaseConfig, igdbConfig, appConfig, steamConfig, authConfig],
       envFilePath: ['.env', '../../.env'],
     }),
     TypeOrmModule.forRootAsync({
@@ -25,11 +26,12 @@ import { SteamModule } from './modules/steam/steam.module';
         database: configService.get<string>('database.database'),
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
-        entities: [Game, Platform, UserGame, PlaySession, CustomTag],
+        entities: [User, Game, Platform, UserGame, PlaySession, CustomTag],
         synchronize: true, // TODO: Use migrations in production
         logging: process.env.NODE_ENV === 'development',
       }),
     }),
+    AuthModule,
     IgdbModule,
     PlatformsModule,
     GamesModule,

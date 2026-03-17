@@ -1,4 +1,5 @@
 export { ApiService } from './api.service';
+export { AuthService } from './auth.service';
 export { GamesService } from './games.service';
 export { IgdbService } from './igdb.service';
 export type { IgdbGameDetails } from './igdb.service';

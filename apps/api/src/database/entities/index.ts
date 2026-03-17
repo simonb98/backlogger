@@ -1,3 +1,4 @@
+export { User } from './user.entity';
 export { Game } from './game.entity';
 export { Platform } from './platform.entity';
 export { UserGame } from './user-game.entity';
