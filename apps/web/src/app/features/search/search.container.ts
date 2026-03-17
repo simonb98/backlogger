@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { injectMutation, injectQuery, QueryClient } from '@tanstack/angular-query-experimental';
-import { debounceTime, distinctUntilChanged, lastValueFrom, of, Subject, switchMap } from 'rxjs';
-import { IgdbSearchResult } from '../../core/models';
-import { GamesService, IgdbService, PlatformsService } from '../../core/services';
+import { debounceTime, distinctUntilChanged, of, Subject, switchMap } from 'rxjs';
+import { injectIgdbPopularQuery, IgdbSearchResult } from '../../libs/client-igdb-api';
+import { injectAddGameMutation, GAMES_QUERY_KEY } from '../../libs/client-games-api';
+import { injectPlatforms } from '../../libs/client-platforms-api';
+import { IgdbService } from '../../core/services';
 
 @Component({
   selector: 'app-search-container',
@@ -175,9 +176,6 @@ import { GamesService, IgdbService, PlatformsService } from '../../core/services
 })
 export class SearchContainer {
   private igdbService = inject(IgdbService);
-  private platformsService = inject(PlatformsService);
-  private gamesService = inject(GamesService);
-  private queryClient = inject(QueryClient);
 
   searchQuery = signal('');
   results = signal<IgdbSearchResult[]>([]);
@@ -189,32 +187,21 @@ export class SearchContainer {
   addStatus = signal<'backlog' | 'wishlist'>('backlog');
   addedGameIds = new Set<number>();
 
-  platforms = this.platformsService.platforms;
-
-  // Popular games query
-  popularGamesQuery = injectQuery(() => ({
-    queryKey: ['popular-games'],
-    queryFn: () => lastValueFrom(this.igdbService.getPopular(20)),
-    staleTime: 1000 * 60 * 10, // 10 minutes
-  }));
+  // Use client libs
+  platforms = injectPlatforms();
+  popularGamesQuery = injectIgdbPopularQuery(20);
+  addGameMutation = injectAddGameMutation({
+    onSuccess: (igdbId) => {
+      this.addedGameIds.add(igdbId);
+      this.closeAddDialog();
+    },
+    onError: (err) => {
+      alert(err.message || 'Failed to add game');
+    },
+  });
 
   popularGames = computed(() => this.popularGamesQuery.data() || []);
   loadingPopular = computed(() => this.popularGamesQuery.isPending());
-
-  // Add game mutation
-  addGameMutation = injectMutation(() => ({
-    mutationFn: (data: { igdbId: number; platformId: number; status: 'backlog' | 'wishlist' }) =>
-      lastValueFrom(this.gamesService.addGame(data)),
-    onSuccess: (_result, variables) => {
-      this.addedGameIds.add(variables.igdbId);
-      this.queryClient.invalidateQueries({ queryKey: ['games'] });
-      this.closeAddDialog();
-    },
-    onError: (err: any) => {
-      alert(err.error?.error?.message || 'Failed to add game');
-    },
-  }));
-
   adding = computed(() => this.addGameMutation.isPending());
 
   // Filter platforms to only show ones available for the selected game
@@ -230,8 +217,6 @@ export class SearchContainer {
   private searchSubject = new Subject<string>();
 
   constructor() {
-    this.platformsService.loadPlatforms();
-
     // Search still uses RxJS for debouncing
     this.searchSubject
       .pipe(

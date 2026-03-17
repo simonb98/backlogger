@@ -73,15 +73,22 @@ export function injectGameQuery(getId: () => number | null) {
 /**
  * Mutation for adding a new game
  */
-export function injectAddGameMutation() {
+export function injectAddGameMutation(options?: {
+  onSuccess?: (igdbId: number) => void;
+  onError?: (error: Error) => void;
+}) {
   const gamesService = inject(GamesService);
   const queryClient = inject(QueryClient);
 
   return injectMutation(() => ({
     mutationFn: (data: { igdbId: number; platformId: number; status: 'backlog' | 'wishlist' }) =>
       lastValueFrom(gamesService.addGame(data)),
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: [GAMES_QUERY_KEY] });
+      options?.onSuccess?.(variables.igdbId);
+    },
+    onError: (error: Error) => {
+      options?.onError?.(error);
     },
   }));
 }
