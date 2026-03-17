@@ -130,7 +130,7 @@ export function injectBulkUpdateGamesMutation(options?: { onSuccess?: () => void
 /**
  * Mutation for deleting a game
  */
-export function injectDeleteGameMutation() {
+export function injectDeleteGameMutation(options?: { onSuccess?: () => void }) {
   const gamesService = inject(GamesService);
   const queryClient = inject(QueryClient);
 
@@ -138,6 +138,7 @@ export function injectDeleteGameMutation() {
     mutationFn: (id: number) => lastValueFrom(gamesService.deleteGame(id)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [GAMES_QUERY_KEY] });
+      options?.onSuccess?.();
     },
   }));
 }

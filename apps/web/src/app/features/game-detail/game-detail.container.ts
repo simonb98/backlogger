@@ -1,9 +1,16 @@
-import { Component, inject, signal, OnInit, input, computed } from '@angular/core';
+import { Component, inject, signal, input, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { GamesService } from '../../core/services';
-import { UserGame, GameStatus, GAME_STATUS_LABELS, GAME_STATUS_COLORS } from '../../core/models';
+import {
+  injectGameQuery,
+  injectUpdateGameMutation,
+  injectDeleteGameMutation,
+  UserGame,
+  GameStatus,
+  GAME_STATUS_LABELS,
+  GAME_STATUS_COLORS,
+} from '../../libs/client-games-api';
 
 @Component({
   selector: 'app-game-detail-container',
@@ -170,25 +177,36 @@ import { UserGame, GameStatus, GAME_STATUS_LABELS, GAME_STATUS_COLORS } from '..
     }
   `,
 })
-export class GameDetailContainer implements OnInit {
-  private gamesService = inject(GamesService);
+export class GameDetailContainer {
   private router = inject(Router);
 
   // Route param
   id = input.required<string>();
 
-  userGame = signal<UserGame | null>(null);
-  loading = signal(true);
-  saving = signal(false);
-  error = signal<string | null>(null);
-  
+  // Use client libs
+  gameQuery = injectGameQuery(() => {
+    const idStr = this.id();
+    return idStr ? parseInt(idStr, 10) : null;
+  });
+
+  updateMutation = injectUpdateGameMutation();
+  deleteMutation = injectDeleteGameMutation({
+    onSuccess: () => this.router.navigate(['/library']),
+  });
+
+  // Derived state from query
+  userGame = computed(() => this.gameQuery.data() ?? null);
+  loading = computed(() => this.gameQuery.isPending());
+  error = computed(() => this.gameQuery.error() ? 'Failed to load game' : null);
+  saving = computed(() => this.updateMutation.isPending());
+
   // Edit state
   editedStatus = signal<GameStatus>('backlog');
   editedRating = signal<number | null>(null);
   editedNotes = signal('');
   editedReview = signal('');
   editedCompletionPercent = signal(0);
-  
+
   // UI state
   showDeleteConfirm = signal(false);
   activeScreenshot = signal(0);
@@ -202,48 +220,24 @@ export class GameDetailContainer implements OnInit {
     return date ? new Date(date).getFullYear() : null;
   });
 
-  ngOnInit() {
-    this.loadGame();
-  }
-
-  loadGame() {
-    this.loading.set(true);
-    this.error.set(null);
-
-    const gameId = parseInt(this.id(), 10);
-    this.gamesService.getGame(gameId).subscribe({
-      next: (game) => {
-        this.userGame.set(game);
+  constructor() {
+    // Sync edit state when game data loads
+    effect(() => {
+      const game = this.userGame();
+      if (game) {
         this.editedStatus.set(game.status);
         this.editedRating.set(game.rating ?? null);
         this.editedNotes.set(game.notes ?? '');
         this.editedReview.set(game.review ?? '');
         this.editedCompletionPercent.set(game.completionPercent);
-        this.loading.set(false);
-      },
-      error: (err) => {
-        this.error.set('Failed to load game');
-        this.loading.set(false);
-        console.error('Load game error:', err);
-      },
+      }
     });
   }
 
   saveField(field: string, value: any) {
     const game = this.userGame();
     if (!game) return;
-
-    this.saving.set(true);
-    this.gamesService.updateGame(game.id, { [field]: value }).subscribe({
-      next: (updated) => {
-        this.userGame.set(updated);
-        this.saving.set(false);
-      },
-      error: (err) => {
-        console.error('Save error:', err);
-        this.saving.set(false);
-      },
-    });
+    this.updateMutation.mutate({ id: game.id, updates: { [field]: value } });
   }
 
   setStatus(status: GameStatus) {
@@ -254,16 +248,7 @@ export class GameDetailContainer implements OnInit {
   deleteGame() {
     const game = this.userGame();
     if (!game) return;
-
-    this.gamesService.deleteGame(game.id).subscribe({
-      next: () => {
-        this.router.navigate(['/library']);
-      },
-      error: (err) => {
-        console.error('Delete error:', err);
-        alert('Failed to delete game');
-      },
-    });
+    this.deleteMutation.mutate(game.id);
   }
 
   setRating(rating: number) {
