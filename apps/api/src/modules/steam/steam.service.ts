@@ -8,6 +8,7 @@ export interface SteamGame {
   playtime_forever: number; // minutes
   img_icon_url: string;
   playtime_2weeks?: number;
+  rtime_last_played?: number; // Unix timestamp of last played
 }
 
 export interface SteamProfile {

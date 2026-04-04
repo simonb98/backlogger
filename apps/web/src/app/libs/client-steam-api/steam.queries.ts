@@ -2,7 +2,7 @@ import { inject, signal } from '@angular/core';
 import { injectMutation, injectQuery, QueryClient } from '@tanstack/angular-query-experimental';
 import { lastValueFrom, Subscription } from 'rxjs';
 import { SteamService, ImportProgress, ImportResult } from '../../core/services/steam.service';
-import { GAMES_QUERY_KEY } from '../client-games-api';
+import { GAMES_QUERY_KEY, GAME_DETAIL_QUERY_KEY } from '../client-games-api';
 
 export const STEAM_PROFILE_QUERY_KEY = 'steam-profile';
 
@@ -90,5 +90,28 @@ export function injectSteamImportMutation() {
     data: () => data(),
     error: () => error(),
   };
+}
+
+/**
+ * Mutation for syncing dates from Steam achievements
+ */
+export function injectSyncDatesMutation(options?: {
+  onSuccess?: (result: { dateStarted?: string; dateCompleted?: string; updated: boolean }) => void;
+  onError?: (error: Error) => void;
+}) {
+  const steamService = inject(SteamService);
+  const queryClient = inject(QueryClient);
+
+  return injectMutation(() => ({
+    mutationFn: (userGameId: number) => lastValueFrom(steamService.syncDates(userGameId)),
+    onSuccess: (result, userGameId) => {
+      // Invalidate the specific game query to refresh the data
+      queryClient.invalidateQueries({ queryKey: [GAME_DETAIL_QUERY_KEY, userGameId] });
+      options?.onSuccess?.(result);
+    },
+    onError: (error: Error) => {
+      options?.onError?.(error);
+    },
+  }));
 }
 

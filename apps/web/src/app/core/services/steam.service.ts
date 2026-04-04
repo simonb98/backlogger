@@ -52,6 +52,10 @@ export class SteamService {
     return this.api.post<ImportResult>('/steam/import', { steamId });
   }
 
+  syncDates(userGameId: number): Observable<{ dateStarted?: string; dateCompleted?: string; updated: boolean }> {
+    return this.api.post(`/steam/sync-dates/${userGameId}`, {});
+  }
+
   importGamesWithProgress(steamId: string): Observable<ImportProgress> {
     const subject = new Subject<ImportProgress>();
     const token = this.authService.getToken();

@@ -1,4 +1,4 @@
-export type GameStatus = 'backlog' | 'up_next' | 'playing' | 'completed' | 'dropped' | 'wishlist' | 'on_hold';
+export type GameStatus = 'backlog' | 'up_next' | 'playing' | 'completed' | 'finished' | 'dropped' | 'wishlist' | 'on_hold';
 
 export interface Game {
   id: number;
@@ -51,6 +51,8 @@ export interface UserGame {
   game?: Game;
   platform?: Platform;
   tags?: CustomTag[];
+  /** Other entries for the same game on different platforms */
+  siblingEntries?: UserGame[];
 }
 
 export interface PlaySession {
@@ -82,6 +84,7 @@ export const GAME_STATUS_LABELS: Record<GameStatus, string> = {
   up_next: 'Up Next',
   playing: 'Playing',
   completed: 'Completed',
+  finished: 'Finished',
   dropped: 'Dropped',
   wishlist: 'Wishlist',
   on_hold: 'On Hold',
@@ -92,6 +95,7 @@ export const GAME_STATUS_COLORS: Record<GameStatus, string> = {
   up_next: '#8b5cf6',
   playing: '#3b82f6',
   completed: '#22c55e',
+  finished: '#10b981', // emerald-500
   dropped: '#ef4444',
   wishlist: '#a855f7',
   on_hold: '#f59e0b',

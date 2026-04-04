@@ -78,7 +78,7 @@ export class GamesService {
     };
   }
 
-  async findOne(userId: number, id: number): Promise<UserGame> {
+  async findOne(userId: number, id: number): Promise<UserGame & { siblingEntries?: UserGame[] }> {
     const userGame = await this.userGameRepository.findOne({
       where: { id },
       relations: ['game', 'platform', 'tags', 'sessions'],
@@ -93,7 +93,18 @@ export class GamesService {
       throw new ForbiddenException('Not authorized to access this game');
     }
 
-    return userGame;
+    // Find sibling entries (same game, different platforms)
+    const siblingEntries = await this.userGameRepository.find({
+      where: { userId, gameId: userGame.gameId },
+      relations: ['platform'],
+      order: { dateAdded: 'ASC' },
+    });
+
+    // Filter out the current entry and return as extended object
+    const result = userGame as UserGame & { siblingEntries?: UserGame[] };
+    result.siblingEntries = siblingEntries.filter(e => e.id !== id);
+
+    return result;
   }
 
   async create(userId: number, dto: CreateGameDto): Promise<UserGame> {

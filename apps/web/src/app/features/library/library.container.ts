@@ -366,6 +366,7 @@ export class LibraryContainer implements OnDestroy {
     'up_next',
     'backlog',
     'completed',
+    'finished',
     'on_hold',
     'dropped',
     'wishlist',
@@ -377,6 +378,7 @@ export class LibraryContainer implements OnDestroy {
     'on_hold',
     'wishlist',
     'completed',
+    'finished',
     'dropped',
   ];
 
@@ -457,6 +459,15 @@ export class LibraryContainer implements OnDestroy {
           platforms: userGame.platform ? [userGame.platform] : [],
           isFullyCompleted: userGame.status === 'completed',
         });
+      }
+    }
+
+    // Sort entries within each group so oldest entry is first (for consistent navigation)
+    for (const group of groups.values()) {
+      if (group.entries.length > 1) {
+        group.entries.sort((a, b) =>
+          new Date(a.dateAdded).getTime() - new Date(b.dateAdded).getTime()
+        );
       }
     }
 

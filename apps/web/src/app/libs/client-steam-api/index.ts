@@ -5,7 +5,7 @@ export { STEAM_PROFILE_QUERY_KEY } from './steam.queries';
 export { injectSteamProfileQuery } from './steam.queries';
 
 // Mutations
-export { injectSteamProfileMutation, injectSteamImportMutation } from './steam.queries';
+export { injectSteamProfileMutation, injectSteamImportMutation, injectSyncDatesMutation } from './steam.queries';
 
 // Re-export types
 export type {

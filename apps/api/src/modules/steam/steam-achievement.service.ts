@@ -64,19 +64,37 @@ export class SteamAchievementService {
 
     await this.achievementRepository.save(achievementEntities);
 
+    // Sync dates from achievement unlock times
+    let gameUpdated = false;
+    const unlockedAchievements = achievementEntities.filter(a => a.achieved && a.unlockTime);
+
+    // Set dateStarted from earliest achievement unlock time (if not already set)
+    if (!userGame.dateStarted && unlockedAchievements.length > 0) {
+      const earliestUnlock = unlockedAchievements
+        .sort((a, b) => (a.unlockTime?.getTime() || 0) - (b.unlockTime?.getTime() || 0))[0];
+      if (earliestUnlock?.unlockTime) {
+        userGame.dateStarted = earliestUnlock.unlockTime;
+        gameUpdated = true;
+        this.logger.log(`Set dateStarted for game ${userGameId} from earliest achievement: ${earliestUnlock.unlockTime}`);
+      }
+    }
+
     // Auto-set status to completed if all achievements are unlocked
     const unlockedCount = achievementEntities.filter(a => a.achieved).length;
     if (achievementEntities.length > 0 && unlockedCount === achievementEntities.length) {
       userGame.status = 'completed';
       if (!userGame.dateCompleted) {
         // Set completion date to latest unlock time
-        const latestUnlock = achievementEntities
-          .filter(a => a.unlockTime)
+        const latestUnlock = unlockedAchievements
           .sort((a, b) => (b.unlockTime?.getTime() || 0) - (a.unlockTime?.getTime() || 0))[0];
         userGame.dateCompleted = latestUnlock?.unlockTime || new Date();
+        gameUpdated = true;
       }
-      await this.userGameRepository.save(userGame);
       this.logger.log(`Auto-set game ${userGameId} to completed (100% achievements)`);
+    }
+
+    if (gameUpdated) {
+      await this.userGameRepository.save(userGame);
     }
 
     this.logger.log(`Synced ${achievementEntities.length} achievements for userGame ${userGameId}`);
@@ -145,6 +163,67 @@ export class SteamAchievementService {
 
     this.logger.log(`Synced achievements for ${synced} games, ${failed} failed, ${completed} auto-completed`);
     return { synced, failed, completed };
+  }
+
+  async syncDatesFromAchievements(
+    userGameId: number,
+    userId: number,
+  ): Promise<{ dateStarted?: Date; dateCompleted?: Date; updated: boolean }> {
+    const userGame = await this.userGameRepository.findOne({
+      where: { id: userGameId, userId },
+    });
+
+    if (!userGame) {
+      throw new Error('Game not found in library');
+    }
+
+    // Get existing achievements
+    const achievements = await this.achievementRepository.find({
+      where: { userGameId },
+    });
+
+    if (achievements.length === 0) {
+      return { updated: false };
+    }
+
+    const unlockedAchievements = achievements.filter(a => a.achieved && a.unlockTime);
+
+    if (unlockedAchievements.length === 0) {
+      return { updated: false };
+    }
+
+    let updated = false;
+    let dateStarted: Date | undefined;
+    let dateCompleted: Date | undefined;
+
+    // Set dateStarted from earliest achievement unlock time
+    const earliestUnlock = unlockedAchievements
+      .sort((a, b) => (a.unlockTime?.getTime() || 0) - (b.unlockTime?.getTime() || 0))[0];
+    if (earliestUnlock?.unlockTime) {
+      userGame.dateStarted = earliestUnlock.unlockTime;
+      dateStarted = earliestUnlock.unlockTime;
+      updated = true;
+    }
+
+    // Set dateCompleted if 100% achieved
+    const allUnlocked = achievements.every(a => a.achieved);
+    if (allUnlocked) {
+      const latestUnlock = unlockedAchievements
+        .sort((a, b) => (b.unlockTime?.getTime() || 0) - (a.unlockTime?.getTime() || 0))[0];
+      if (latestUnlock?.unlockTime) {
+        userGame.dateCompleted = latestUnlock.unlockTime;
+        userGame.status = 'completed';
+        dateCompleted = latestUnlock.unlockTime;
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      await this.userGameRepository.save(userGame);
+      this.logger.log(`Synced dates for game ${userGameId}: started=${dateStarted}, completed=${dateCompleted}`);
+    }
+
+    return { dateStarted, dateCompleted, updated };
   }
 }
 

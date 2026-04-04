@@ -19,7 +19,7 @@ import { PlaySession } from './play-session.entity';
 import { CustomTag } from './custom-tag.entity';
 import { Achievement } from './achievement.entity';
 
-export type GameStatus = 'backlog' | 'up_next' | 'playing' | 'completed' | 'dropped' | 'wishlist' | 'on_hold';
+export type GameStatus = 'backlog' | 'up_next' | 'playing' | 'completed' | 'finished' | 'dropped' | 'wishlist' | 'on_hold';
 
 @Entity('user_games')
 @Unique(['user', 'game', 'platform'])
@@ -79,6 +79,9 @@ export class UserGame {
 
   @Column({ name: 'date_completed', type: 'timestamp', nullable: true })
   dateCompleted?: Date;
+
+  @Column({ name: 'last_played_at', type: 'timestamp', nullable: true })
+  lastPlayedAt?: Date;
 
   @Column({ name: 'skipped_until', type: 'timestamp', nullable: true })
   skippedUntil?: Date;

@@ -138,5 +138,15 @@ export class SteamController {
   async syncAllAchievements(@CurrentUser() user: CurrentUserPayload) {
     return this.steamAchievementService.syncAllAchievements(user.id);
   }
+
+  @Post('sync-dates/:userGameId')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Sync started/completed dates from Steam achievements' })
+  async syncDates(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('userGameId', ParseIntPipe) userGameId: number,
+  ) {
+    return this.steamAchievementService.syncDatesFromAchievements(userGameId, user.id);
+  }
 }
 

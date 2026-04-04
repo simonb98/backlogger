@@ -2,7 +2,7 @@ import { IsInt, IsOptional, IsString, IsIn, Min, Max, IsDateString } from 'class
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import type { GameStatus } from '../../../database/entities';
 
-const GAME_STATUSES: GameStatus[] = ['backlog', 'up_next', 'playing', 'completed', 'dropped', 'wishlist', 'on_hold'];
+const GAME_STATUSES: GameStatus[] = ['backlog', 'up_next', 'playing', 'completed', 'finished', 'dropped', 'wishlist', 'on_hold'];
 
 export class UpdateGameDto {
   @ApiPropertyOptional({ description: 'Game status', enum: GAME_STATUSES })

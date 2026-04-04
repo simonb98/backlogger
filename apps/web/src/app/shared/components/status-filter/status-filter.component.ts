@@ -34,7 +34,7 @@ export class StatusFilterComponent {
 
   statusChange = output<GameStatus | null>();
 
-  readonly statuses: GameStatus[] = ['playing', 'up_next', 'backlog', 'completed', 'on_hold', 'dropped', 'wishlist'];
+  readonly statuses: GameStatus[] = ['playing', 'up_next', 'backlog', 'completed', 'finished', 'on_hold', 'dropped', 'wishlist'];
   readonly statusLabels = GAME_STATUS_LABELS;
   readonly statusColors = GAME_STATUS_COLORS;
 

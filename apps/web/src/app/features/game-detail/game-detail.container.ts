@@ -6,10 +6,13 @@ import {
   GAME_STATUS_COLORS,
   GAME_STATUS_LABELS,
   GameStatus,
+  injectAddGameMutation,
   injectDeleteGameMutation,
   injectGameQuery,
   injectUpdateGameMutation,
 } from '../../libs/client-games-api';
+import { injectPlatforms } from '../../libs/client-platforms-api';
+import { injectSyncDatesMutation } from '../../libs/client-steam-api';
 import { ScreenshotCarouselComponent, StarRatingComponent, AchievementsComponent } from '../../shared/components';
 
 @Component({
@@ -72,9 +75,31 @@ import { ScreenshotCarouselComponent, StarRatingComponent, AchievementsComponent
               @if (game.game?.developer) {
                 <span>by {{ game.game?.developer }}</span>
               }
-              <span class="px-3 py-1 bg-gray-200 dark:bg-gray-700 dark:text-gray-300 rounded-full text-sm">{{
-                game.platform?.name
-              }}</span>
+              <!-- Platform tabs -->
+              <div class="flex gap-1 items-center">
+                <span
+                  class="px-3 py-1 bg-blue-500 text-white rounded-full text-sm font-medium"
+                  [title]="'Currently viewing'"
+                >
+                  {{ game.platform?.abbreviation || game.platform?.name }}
+                </span>
+                @for (sibling of game.siblingEntries || []; track sibling.id) {
+                  <button
+                    (click)="switchToEntry(sibling.id)"
+                    class="px-3 py-1 bg-gray-200 dark:bg-gray-700 dark:text-gray-300 rounded-full text-sm hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    [title]="'Switch to ' + sibling.platform?.name"
+                  >
+                    {{ sibling.platform?.abbreviation || sibling.platform?.name }}
+                  </button>
+                }
+                <button
+                  (click)="showAddPlatformDialog.set(true)"
+                  class="px-2 py-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-full text-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="Add another platform"
+                >
+                  +
+                </button>
+              </div>
             </div>
 
             @if (game.game?.genres?.length) {
@@ -167,19 +192,29 @@ import { ScreenshotCarouselComponent, StarRatingComponent, AchievementsComponent
             </section>
 
             <!-- Dates -->
-            <div class="flex gap-8 flex-wrap text-center mb-6">
-              <div>
+            <div class="flex gap-8 flex-wrap items-end mb-6">
+              <div class="text-center">
                 <span class="block text-sm text-gray-500 dark:text-gray-400">Added</span
                 ><span class="font-semibold dark:text-white">{{ formatDate(game.dateAdded) }}</span>
               </div>
-              <div>
+              <div class="text-center">
                 <span class="block text-sm text-gray-500 dark:text-gray-400">Started</span
                 ><span class="font-semibold dark:text-white">{{ formatDate(game.dateStarted) }}</span>
               </div>
-              <div>
+              <div class="text-center">
                 <span class="block text-sm text-gray-500 dark:text-gray-400">Completed</span
                 ><span class="font-semibold dark:text-white">{{ formatDate(game.dateCompleted) }}</span>
               </div>
+              @if (game.steamAppId) {
+                <button
+                  (click)="syncDates()"
+                  [disabled]="syncingDates()"
+                  class="px-3 py-1.5 text-xs bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                  title="Sync started/completed dates from Steam achievements"
+                >
+                  {{ syncingDates() ? '⏳' : '🔄' }} Sync from Steam
+                </button>
+              }
             </div>
 
             <!-- Achievements -->
@@ -226,6 +261,62 @@ import { ScreenshotCarouselComponent, StarRatingComponent, AchievementsComponent
         </div>
       </div>
     }
+
+    <!-- Add Platform Dialog -->
+    @if (showAddPlatformDialog()) {
+      <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" (click)="closeAddPlatformDialog()">
+        <div
+          class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-xl"
+          (click)="$event.stopPropagation()"
+        >
+          <h3 class="text-xl font-bold mb-4 dark:text-white">Add Platform</h3>
+          <p class="text-gray-600 dark:text-gray-400 mb-4">
+            Select a platform to add "{{ userGame()?.game?.name }}" to:
+          </p>
+
+          <div class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto mb-4">
+            @for (platform of availablePlatforms(); track platform.id) {
+              <button
+                (click)="selectedPlatformId.set(platform.id)"
+                class="px-4 py-2 text-left rounded-lg border transition-colors"
+                [class.border-blue-500]="selectedPlatformId() === platform.id"
+                [class.bg-blue-50]="selectedPlatformId() === platform.id"
+                [class.dark:bg-blue-900/30]="selectedPlatformId() === platform.id"
+                [class.border-gray-200]="selectedPlatformId() !== platform.id"
+                [class.dark:border-gray-600]="selectedPlatformId() !== platform.id"
+                [class.hover:border-gray-300]="selectedPlatformId() !== platform.id"
+                [class.dark:hover:border-gray-500]="selectedPlatformId() !== platform.id"
+              >
+                <span class="font-medium dark:text-white">{{ platform.abbreviation }}</span>
+                <span class="text-sm text-gray-500 dark:text-gray-400 block">{{ platform.name }}</span>
+              </button>
+            }
+          </div>
+
+          @if (availablePlatforms().length === 0) {
+            <p class="text-gray-500 dark:text-gray-400 text-center py-4">
+              This game is already added on all available platforms.
+            </p>
+          }
+
+          <div class="flex gap-3">
+            <button
+              class="flex-1 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              (click)="closeAddPlatformDialog()"
+            >
+              Cancel
+            </button>
+            <button
+              class="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              [disabled]="!selectedPlatformId() || addingPlatform()"
+              (click)="addPlatform()"
+            >
+              {{ addingPlatform() ? 'Adding...' : 'Add' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   `,
 })
 export class GameDetailContainer {
@@ -244,12 +335,39 @@ export class GameDetailContainer {
   deleteMutation = injectDeleteGameMutation({
     onSuccess: () => this.router.navigate(['/library']),
   });
+  syncDatesMutation = injectSyncDatesMutation();
+  addGameMutation = injectAddGameMutation({
+    onSuccess: () => {
+      this.closeAddPlatformDialog();
+      // Refresh current game to get updated siblingEntries
+      this.gameQuery.refetch();
+    },
+  });
+
+  // All platforms
+  allPlatforms = injectPlatforms();
 
   // Derived state from query
   userGame = computed(() => this.gameQuery.data() ?? null);
   loading = computed(() => this.gameQuery.isPending());
   error = computed(() => (this.gameQuery.error() ? 'Failed to load game' : null));
   saving = computed(() => this.updateMutation.isPending());
+  syncingDates = computed(() => this.syncDatesMutation.isPending());
+  addingPlatform = computed(() => this.addGameMutation.isPending());
+
+  // Platforms not yet added for this game
+  availablePlatforms = computed(() => {
+    const game = this.userGame();
+    if (!game) return [];
+
+    const existingPlatformIds = new Set<number>();
+    if (game.platformId) existingPlatformIds.add(game.platformId);
+    game.siblingEntries?.forEach(s => {
+      if (s.platformId) existingPlatformIds.add(s.platformId);
+    });
+
+    return this.allPlatforms().filter(p => !existingPlatformIds.has(p.id));
+  });
 
   // Edit state
   editedStatus = signal<GameStatus>('backlog');
@@ -259,12 +377,15 @@ export class GameDetailContainer {
 
   // UI state
   showDeleteConfirm = signal(false);
+  showAddPlatformDialog = signal(false);
+  selectedPlatformId = signal<number | null>(null);
 
   readonly statuses: GameStatus[] = [
     'backlog',
     'up_next',
     'playing',
     'completed',
+    'finished',
     'on_hold',
     'dropped',
     'wishlist',
@@ -323,6 +444,33 @@ export class GameDetailContainer {
   formatDate(dateStr: string | undefined): string {
     if (!dateStr) return 'Not set';
     return new Date(dateStr).toLocaleDateString();
+  }
+
+  syncDates() {
+    const game = this.userGame();
+    if (!game) return;
+    this.syncDatesMutation.mutate(game.id);
+  }
+
+  switchToEntry(entryId: number) {
+    this.router.navigate(['/games', entryId]);
+  }
+
+  closeAddPlatformDialog() {
+    this.showAddPlatformDialog.set(false);
+    this.selectedPlatformId.set(null);
+  }
+
+  addPlatform() {
+    const game = this.userGame();
+    const platformId = this.selectedPlatformId();
+    if (!game?.game?.igdbId || !platformId) return;
+
+    this.addGameMutation.mutate({
+      igdbId: game.game.igdbId,
+      platformId,
+      status: 'backlog',
+    });
   }
 
   goBack() {

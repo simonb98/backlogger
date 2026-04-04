@@ -182,6 +182,11 @@ export class SteamImportService {
       where: { userId, gameId: game.id, platformId: platform.id },
     });
 
+    // Parse last played date from Steam
+    const lastPlayedAt = steamGame.rtime_last_played
+      ? new Date(steamGame.rtime_last_played * 1000)
+      : undefined;
+
     if (existing) {
       let updated = false;
       // Update playtime if Steam has more
@@ -192,6 +197,11 @@ export class SteamImportService {
       // Update Steam app ID if not set
       if (!existing.steamAppId) {
         existing.steamAppId = steamGame.appid;
+        updated = true;
+      }
+      // Update last played date if Steam has a more recent one
+      if (lastPlayedAt && (!existing.lastPlayedAt || lastPlayedAt > existing.lastPlayedAt)) {
+        existing.lastPlayedAt = lastPlayedAt;
         updated = true;
       }
       if (updated) {
@@ -209,6 +219,7 @@ export class SteamImportService {
       status: 'backlog',
       totalPlaytimeMins: steamGame.playtime_forever,
       steamAppId: steamGame.appid,
+      lastPlayedAt,
     });
     await this.userGameRepository.save(userGame);
 

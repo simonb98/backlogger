@@ -3,7 +3,7 @@ import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import type { GameStatus } from '../../../database/entities';
 
-const GAME_STATUSES: GameStatus[] = ['backlog', 'up_next', 'playing', 'completed', 'dropped', 'wishlist', 'on_hold'];
+const GAME_STATUSES: GameStatus[] = ['backlog', 'up_next', 'playing', 'completed', 'finished', 'dropped', 'wishlist', 'on_hold'];
 const SORT_FIELDS = ['name', 'date_added', 'rating', 'playtime', 'release_date'] as const;
 const SORT_ORDERS = ['asc', 'desc'] as const;
 
